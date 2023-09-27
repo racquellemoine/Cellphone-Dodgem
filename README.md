@@ -5,11 +5,11 @@ This project belongs to Department of Computer Science, Columbia University. It 
 
 ## Summary
 
-Course: COMS 4444 Programming and Problem Solving (Fall 2023)  
-Problem Description: http://www.cs.columbia.edu/~kar/4444f23/node19.html
-Course Website: http://www.cs.columbia.edu/~kar/4444f23/4444f23.html
-University: Columbia University  
-Instructor: Prof. Kenneth Ross  
+Course: COMS 4444 Programming and Problem Solving (Fall 2023)  <br>
+Problem Description: http://www.cs.columbia.edu/~kar/4444f23/node19.html<br>
+Course Website: http://www.cs.columbia.edu/~kar/4444f23/4444f23.html<br>
+University: Columbia University  <br>
+Instructor: Prof. Kenneth Ross  <br>
 Project Language: Python
 
 
