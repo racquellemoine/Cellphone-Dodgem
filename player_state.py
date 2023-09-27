@@ -32,8 +32,7 @@ class PlayerState:
 
         # log file
         self.log = os.path.join("logs", "player " + str(name) + ".txt")
-        # self.log = "./log/player " + str(name) + ".txt"
-        print(self.log)
+        
         with open(self.log, 'w') as f:
             f.write("Player Moves\n")
         self.score = 0
