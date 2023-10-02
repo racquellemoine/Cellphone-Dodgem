@@ -1,0 +1,11 @@
+Player Moves
+TURN 1: Time taken: 3.814697265625e-06                       Action: Move to (0.4593056758265589, 55.88827827630394)
+TURN 2: Time taken: 3.5762786865234375e-06                   Action: Move to (0.9186113516531178, 56.776556552607886) Collected 1 item from stall 66
+TURN 3: Time taken: 8.344650268554688e-06                    Action: Move to (1.3779170274796768, 57.66483482891183)
+TURN 4: Time taken: 1.9073486328125e-06                      Action: Move to (1.8372227033062356, 58.55311310521577)
+TURN 5: Time taken: 3.337860107421875e-06                    Action: Move to (2.2965283791327944, 59.441391381519715)
+TURN 6: Time taken: 2.1457672119140625e-06                   Action: Move to (2.755834054959353, 60.32966965782366)
+TURN 7: Time taken: 1.9073486328125e-06                      Action: Move to (3.215139730785912, 61.2179479341276)
+TURN 8: Time taken: 2.1457672119140625e-06                   Action: Move to (3.6744454066124708, 62.106226210431544)
+TURN 9: Time taken: 1.6689300537109375e-06                   Action: Move to (4.13375108243903, 62.99450448673549)
+TURN 10: Time taken: 2.1457672119140625e-06                   Action: Move to (4.593056758265589, 63.88278276303943)

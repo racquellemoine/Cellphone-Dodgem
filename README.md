@@ -12,9 +12,6 @@ University: Columbia University  <br>
 Instructor: Prof. Kenneth Ross  <br>
 Project Language: Python
 
-
-
-
 ### TA Designer for this project
 
 1. Smrithi Prakash
@@ -22,10 +19,6 @@ Project Language: Python
 ### Teaching Assistants for Course
 1. Akshay Iyer
 2. Smrithi Prakash
-
-
-
-
 
 ## Installation
 
@@ -45,10 +38,10 @@ pip install -r requirements.txt
 python main.py [-ns/--no_of_stalls] [-nv/--no_to_visit] [-theta/--theta] [-T/--total_time] [-p/--players] [-s/--seed] [-g/--gui]
 ```
 
-<!-- ### Running without Simulator
+### Running without Simulator
 
 ```bash
 python main.py -g False
-``` -->
+```
 
 You can change the random seed, number of stalls, number of stalls to visit, theta value, timeout, list of players, and seed.

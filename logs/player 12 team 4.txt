@@ -1,0 +1,11 @@
+Player Moves
+TURN 1: Time taken: 4.5299530029296875e-06                   Action: Move to (72.40292168366335, 0.9152344600340895)
+TURN 2: Time taken: 3.0994415283203125e-06                   Action: Move to (72.8058433673267, 1.830468920068179)
+TURN 3: Time taken: 3.5762786865234375e-06                   Action: Move to (73.20876505099005, 2.7457033801022686)
+TURN 4: Time taken: 3.0994415283203125e-06                   Action: Move to (73.6116867346534, 3.660937840136358)
+TURN 5: Time taken: 2.1457672119140625e-06                   Action: Move to (74.01460841831675, 4.576172300170447)
+TURN 6: Time taken: 1.9073486328125e-06                      Action: Move to (74.4175301019801, 5.491406760204537) Collided with obstacle 40
+TURN 7: Time taken: 2.384185791015625e-06                    Action: Move to (73.43438572827469, 3.7617144252865784) Cannot move as wait time = 10
+TURN 8: Time taken: 2.1457672119140625e-06                   Action: Move to (73.43438572827469, 3.7617144252865784) Cannot move as wait time = 9
+TURN 9: Time taken: 4.0531158447265625e-06                   Action: Move to (73.43438572827469, 3.7617144252865784) Cannot move as wait time = 8
+TURN 10: Time taken: 2.1457672119140625e-06                   Action: Move to (73.43438572827469, 3.7617144252865784) Cannot move as wait time = 7
