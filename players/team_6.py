@@ -1,5 +1,6 @@
 import math
 import random
+import sys
 random.seed(2)
 
 class Player:
@@ -48,6 +49,7 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
+        self.get_closest_stall()
         if self.pos_x <= 0:
             self.sign_x = 1
             self.vx = random.random()
@@ -72,3 +74,17 @@ class Player:
         new_pos_y = self.pos_y + self.sign_y * self.vy
 
         return new_pos_x, new_pos_y
+
+
+    #returns the closest stall to the player
+    def get_closest_stall(self):
+        min_distance =  sys.maxsize
+        curr_stall = None
+        for stall in self.stalls_to_visit:
+            curr_dist = math.sqrt((stall.x - self.pos_x)**2 + \
+                                                   (stall.y - self.pos_y)**2)
+            if curr_dist < min_distance:
+                min_distance =  curr_dist
+                curr_stall = stall
+        return curr_stall
+
