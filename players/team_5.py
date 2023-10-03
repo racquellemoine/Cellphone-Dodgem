@@ -1,5 +1,7 @@
 import math
 import random
+from collections import deque
+from itertools import chain
 random.seed(2)
 
 class Player:
@@ -20,9 +22,38 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
+        # custom 
+        self.q = __init_queue()
+
+    
+    def __init_queue(self):
+        q = deque()
+        stv = self.stalls_to_visit
+
+        min_d = float('inf')
+        closest = None
+        for i, s in enumerate(stv):
+            d = calc_distance(s.x, s.y)
+            if (d < min_d):
+                min_d = d
+                closest = i
+
+        for s in chain(stv[closest:], stv[:closest]):
+            q.append(s)
+
+        return q
+
+    def __calc_distance(self, x1, y1, x2, y2):
+        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+
+    def __normalize(self, vx, vy):
+        norm = __calc_distance(self.pos_x, self.pos_y, vx, vy)
+
+        return vx / norm, vy / norm
+
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-        pass
+            self.q.remove(stall_id)
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -67,6 +98,9 @@ class Player:
             self.sign_y = -1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx**2)
+
+        if (!len(q)):
+            self.vx, self.vy = __normalize(self.q[0].x, self.q[0].y)
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
