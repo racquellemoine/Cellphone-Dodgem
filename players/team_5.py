@@ -64,11 +64,12 @@ class Player:
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-        if stall_id == id(self.q[0]):
+        if stall_id == self.q[0].id:
             self.q.popleft()
+            print(self.q[0].id)
         else:
             for s in self.q:
-                if stall_id == id(s):
+                if stall_id == s.id:
                     self.q.remove(s)
 
     # simulator calls this function when it passes the lookup information
@@ -102,6 +103,5 @@ class Player:
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
-        print(new_pos_x, new_pos_y)
 
         return new_pos_x, new_pos_y
