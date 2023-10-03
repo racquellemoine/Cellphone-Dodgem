@@ -95,26 +95,6 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        if self.pos_x <= 0:
-            self.sign_x = 1
-            self.vx = random.random()
-            self.vy = math.sqrt(1 - self.vx**2)
-
-        if self.pos_y <= 0:
-            self.sign_y = 1
-            self.vx = random.random()
-            self.vy = math.sqrt(1 - self.vx**2)
-
-        if self.pos_x >= 100:
-            self.sign_x = -1
-            self.vx = random.random()
-            self.vy = math.sqrt(1 - self.vx**2)
-
-        if self.pos_y >= 100:
-            self.sign_y = -1
-            self.vx = random.random()
-            self.vy = math.sqrt(1 - self.vx**2)
-
         if (len(self.q) > 0):
             vx = self.q[0].x - self.pos_x
             vy = self.q[0].y - self.pos_y
