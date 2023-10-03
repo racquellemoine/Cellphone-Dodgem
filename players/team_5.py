@@ -22,38 +22,44 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
+        print(len(self.stalls_to_visit))
+        print(len(self.tsp_path))
         # custom 
-        self.q = __init_queue()
-
+        self.q = deque()
+        self.__init_queue()
     
     def __init_queue(self):
-        q = deque()
         stv = self.stalls_to_visit
+        tsp = self.tsp_path
 
         min_d = float('inf')
-        closest = None
+        closest = 0
         for i, s in enumerate(stv):
-            d = calc_distance(s.x, s.y)
+            d = self.__calc_distance(self.pos_x, self.pos_y, s.x, s.y)
             if (d < min_d):
                 min_d = d
                 closest = i
 
-        for s in chain(stv[closest:], stv[:closest]):
-            q.append(s)
-
-        return q
+        c = tsp.index(closest)
+        for i in chain(tsp[c:], tsp[:c]):
+            self.q.append(stv[i])
 
     def __calc_distance(self, x1, y1, x2, y2):
         return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
 
     def __normalize(self, vx, vy):
-        norm = __calc_distance(self.pos_x, self.pos_y, vx, vy)
+        norm = self.__calc_distance(vx, vy, 0, 0)
 
         return vx / norm, vy / norm
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-            self.q.remove(stall_id)
+        if stall_id == id(self.q[0]):
+            self.q.popleft()
+        else:
+            for s in self.q:
+                if stall_id == id(s):
+                    self.q.remove(s)
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -99,8 +105,10 @@ class Player:
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx**2)
 
-        if (!len(q)):
-            self.vx, self.vy = __normalize(self.q[0].x, self.q[0].y)
+        if (len(q) > 0):
+            vx = self.q[0].x - self.pos_x
+            vy = self.q[0].y - self.pos_y
+            self.vx, self.vy = self.__normalize(vx, vy)
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
