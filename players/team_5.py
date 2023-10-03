@@ -1,5 +1,6 @@
 import math
 import random
+import fast_tsp
 from collections import deque
 from itertools import chain
 random.seed(2)
@@ -12,6 +13,7 @@ class Player:
         self.pos_x = initial_pos_x
         self.pos_y = initial_pos_y
         self.stalls_to_visit = stalls_to_visit
+        self.num_stalls = len(stalls_to_visit)
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
@@ -22,27 +24,35 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
-        print(len(self.stalls_to_visit))
-        print(len(self.tsp_path))
         # custom 
+        self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
         self.q = deque()
+
+        self.__init_tsp()
         self.__init_queue()
     
     def __init_queue(self):
         stv = self.stalls_to_visit
         tsp = self.tsp_path
 
-        min_d = float('inf')
-        closest = 0
-        for i, s in enumerate(stv):
-            d = self.__calc_distance(self.pos_x, self.pos_y, s.x, s.y)
-            if (d < min_d):
-                min_d = d
-                closest = i
+        for i in tsp[1:]:
+            self.q.append(stv[i-1])
 
-        c = tsp.index(closest)
-        for i in chain(tsp[c:], tsp[:c]):
-            self.q.append(stv[i])
+    def __init_tsp(self):
+        stv = self.stalls_to_visit
+        n = self.num_stalls
+        px, py = self.pos_x, self.pos_y
+
+        for i in range(0, n):
+            d = self.__calc_distance(px, py, stv[i].x, stv[i].y)
+            self.dists[0][i+1] = math.ceil(d)
+
+        for i in range(0, n):
+            for j in range(0, n):
+                d = self.__calc_distance(stv[i].x, stv[i].y, stv[j].x, stv[j].y)
+                self.dists[i+1][j+1] = math.ceil(d)
+                
+        self.tsp_path = fast_tsp.find_tour(self.dists)
 
     def __calc_distance(self, x1, y1, x2, y2):
         return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
@@ -105,12 +115,13 @@ class Player:
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx**2)
 
-        if (len(q) > 0):
+        if (len(self.q) > 0):
             vx = self.q[0].x - self.pos_x
             vy = self.q[0].y - self.pos_y
             self.vx, self.vy = self.__normalize(vx, vy)
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
+        print(new_pos_x, new_pos_y)
 
         return new_pos_x, new_pos_y
