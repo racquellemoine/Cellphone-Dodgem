@@ -15,8 +15,9 @@ class Player:
         self.tsp_path = tsp_path
         self.num_players = num_players
 
-        self.vx = random.random()
-        self.vy = math.sqrt(1 - self.vx**2)
+        # moving direction. make sure norm of (vx, vy) is 1
+        self.vx = 1
+        self.vy = 0
 
         self.sign_x = 1
         self.sign_y = 1
@@ -49,7 +50,7 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        self.get_closest_stall()
+        ns = self.get_closest_stall()
         if self.pos_x <= 0:
             self.sign_x = 1
             self.vx = random.random()
