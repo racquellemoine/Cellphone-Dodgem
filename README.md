@@ -35,7 +35,7 @@ pip install -r requirements.txt
 ### Simulator
 
 ```bash
-python main.py [-ns/--no_of_stalls] [-nv/--no_to_visit] [-theta/--theta] [-T/--total_time] [-p/--players] [-s/--seed] [-g/--gui]
+python main.py [-ns/--no_of_stalls] [-nv/--no_to_visit] [-theta/--theta] [-T/--total_time] [-p/--players] [-s/--seed] [-g/--gui] [-sc/--scale]
 ```
 
 ### Running without Simulator
