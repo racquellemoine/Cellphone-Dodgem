@@ -616,6 +616,10 @@ class DodgemGame(tk.Tk):
                 player.pass_lookup_info(other_players, stalls)
                 new_positions.append([pos_x, pos_y])
                 updates.append(False)
+                if self.player_states[index].wait == 0:
+                    update_wait.append(False)
+                else:
+                    update_wait.append(True)
                 end_time = time.time()
                 logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + "Action: Lookup")
 
