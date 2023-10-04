@@ -13,6 +13,8 @@ class Player:
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
+        self.obstacles_list= []
+        self.other_players_list= []
 
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
@@ -24,12 +26,18 @@ class Player:
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-        pass
+        for stall in self.stalls_to_visit:
+            if stall.id == stall_id:
+                self.stalls_to_visit.remove(stall)
+        
+        return stall_id
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        pass
+        self.obstacles_list.append(other_players)
+        self.other_players_list.append(other_players)
+        return
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
