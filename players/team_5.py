@@ -27,6 +27,7 @@ class Player:
         # custom 
         self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
         self.q = deque()
+        self.encounter = 0
 
         self.__init_tsp()
         self.__init_queue()
@@ -62,6 +63,12 @@ class Player:
 
         return vx / norm, vy / norm
 
+    def __dot(self, a, b):
+        ax, ay = a
+        bx, by = b
+
+        return ax * bx + ay * by
+
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
         if stall_id == self.q[0].id:
@@ -72,13 +79,47 @@ class Player:
                 if stall_id == s.id:
                     self.q.remove(s)
 
+    def __check_fov(self, obstacle):
+        bx, by = obstacle
+        fov = math.cos(math.pi / 8)
+        a = self.vx, self.vy 
+        b = self.__normalize(bx - self.pos_x, by - self.pos_y)
+
+        return self.__dot(a, b) > fov
+
+    def __check_collision(self, obstacle):
+        o_x, o_y = obstacle
+        p_x, p_y = self.pos_x, self.pos_y
+        t_x, t_y = self.q[0].x, self.q[0].y
+
+        c1x, c1y = o_x - 1, o_y - 1
+        c2x, c2y = o_x + 1, o_y - 1
+        c3x, c3y = o_x + 1, o_y + 1
+        c4x, c4y = o_x - 1, o_y + 1
+
+        if self.intersection(c1x, c1y - 0.5, c2x, c2y - 0.5, p_x, p_y, t_x, t_y):
+            return True
+        if self.intersection(c2x + 0.5, c2y, c3x + 0.5, c3y, p_x, p_y, t_x, t_y):
+            return True
+        if self.intersection(c3x, c3y + 0.5, c4x, c4y + 0.5, p_x, p_y, t_x, t_y):
+            return True
+        if self.intersection(c4x - 0.5, c4y, c1x - 0.5, c1y, p_x, p_y, t_x, t_y):
+            return True
+
+        return False
+
+
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        pass
+        for o in obstacles:
+            if self.__check_fov(o) and self.__check_collision(o):
+                pass
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
+        self.encounter = 15
+
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -96,10 +137,16 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        if (len(self.q) > 0):
+        if self.encounter > 0:
+            self.encounter -= 1
+        elif len(self.q) > 0:
             vx = self.q[0].x - self.pos_x
             vy = self.q[0].y - self.pos_y
+            self.sign_x = 1
+            self.sign_y = 1
             self.vx, self.vy = self.__normalize(vx, vy)
+        elif len(self.q) == 0:
+            self.vx, self.vy = 0, 0
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
