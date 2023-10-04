@@ -1,14 +1,11 @@
 Player Moves
-TURN 1: Time taken: 6.67572021484375e-06                     Action: Move to (99.73124748421215, 99.31788775349403)
-TURN 2: Time taken: 1.9073486328125e-06                      Action: Move to (100.4624949684243, 98.63577550698807) Collided with boundary
-TURN 3: Time taken: 9.775161743164062e-06                    Action: Move to (99.35207152014598, 99.39747668526869) Cannot move as wait time = 10
-TURN 4: Time taken: 1.5974044799804688e-05                   Action: Move to (99.63989323405939, 99.56868660517685) Cannot move as wait time = 9
-TURN 5: Time taken: 6.9141387939453125e-06                   Action: Move to (99.45242207996006, 99.47253020311156) Cannot move as wait time = 8
-TURN 6: Time taken: 7.3909759521484375e-06                   Action: Move to (99.28674043159475, 99.33667549134987) Cannot move as wait time = 7
-TURN 7: Time taken: 6.4373016357421875e-06                   Action: Move to (99.08803143606718, 99.04603559327276) Cannot move as wait time = 6
-TURN 8: Time taken: 7.152557373046875e-06                    Action: Move to (99.9185865390181, 99.63245592134913) Cannot move as wait time = 5
-TURN 9: Time taken: 9.059906005859375e-06                    Action: Move to (99.18031997343843, 99.20859716689282) Cannot move as wait time = 4
-TURN 10: Time taken: 7.152557373046875e-06                    Action: Move to (99.46714549793863, 99.4819823845499) Cannot move as wait time = 3
-TURN 11: Time taken: 6.9141387939453125e-06                   Action: Move to (99.18370969841651, 99.21341738872859) Cannot move as wait time = 2
-TURN 12: Time taken: 6.4373016357421875e-06                   Action: Move to (99.61744436638628, 99.55970796512037) Cannot move as wait time = 1
-TURN 13: Time taken: 6.4373016357421875e-06                   Action: Move to (99.08503011605437, 99.03929763955644)
+TURN 1: Time taken: 9.059906005859375e-06                    Action: Move to (99.73124748421215, 99.31788775349403)
+TURN 2: Time taken: 2.86102294921875e-06                     Action: Move to (100.4624949684243, 98.63577550698807) Collided with boundary
+TURN 3: Time taken: 1.0251998901367188e-05                   Action: Move to (99.35207152014598, 99.39747668526869) Cannot move as wait time = 10
+TURN 4: Time taken: 1.7881393432617188e-05                   Action: Move to (99.63989323405939, 99.56868660517685) Cannot move as wait time = 9
+TURN 5: Time taken: 8.344650268554688e-06                    Action: Move to (99.45242207996006, 99.47253020311156) Cannot move as wait time = 8
+TURN 6: Time taken: 9.775161743164062e-06                    Action: Move to (99.28674043159475, 99.33667549134987) Cannot move as wait time = 7
+TURN 7: Time taken: 7.867813110351562e-06                    Action: Move to (99.08803143606718, 99.04603559327276) Cannot move as wait time = 6
+TURN 8: Time taken: 9.298324584960938e-06                    Action: Move to (99.9185865390181, 99.63245592134913) Cannot move as wait time = 5
+TURN 9: Time taken: 8.344650268554688e-06                    Action: Move to (99.18031997343843, 99.20859716689282) Cannot move as wait time = 4
+TURN 10: Time taken: 8.344650268554688e-06                    Action: Move to (99.46714549793863, 99.4819823845499) Cannot move as wait time = 3

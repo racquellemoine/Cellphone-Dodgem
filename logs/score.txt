@@ -1,41 +1,41 @@
 Score Info
 
 Turn No. : 1
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        1              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0            
 
 Turn No. : 2
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        2              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 3
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        3              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 4
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        4              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 5
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        5              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 6
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        6              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 7
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        7              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 8
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        8              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 9
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        9              0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
 
 Turn No. : 10
-Player ID   Name      Items       Interaction    Satisfaction   
-14          2         0/50        10             0              
+Player ID Name     Items     Interaction  Satisfaction 
+8         8        0/50      1            0.0          
