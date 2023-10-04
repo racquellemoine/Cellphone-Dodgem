@@ -1,7 +1,9 @@
 import math
 import random
 import fast_tsp
-from collections import deque
+import pyvisgraph as vg
+import os
+from collections import deque, defaultdict
 from itertools import chain
 random.seed(2)
 
@@ -24,14 +26,21 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
-        # custom 
+        # pathing
         self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
         self.q = deque()
-        self.encounter = 0
-
         self.__init_tsp()
         self.__init_queue()
     
+        # obstacle avoidance
+        self.lookup_timer = 1
+        self.polys = defaultdict(list)
+        self.graph = vg.VisGraph()
+        self.workers = len(os.sched_getaffinity(0))
+        self.need_update = True
+        self.path = deque()
+        self.curr_g = set()
+
     def __init_queue(self):
         stv = self.stalls_to_visit
         tsp = self.tsp_path
@@ -73,53 +82,60 @@ class Player:
     def collect_item(self, stall_id):
         if stall_id == self.q[0].id:
             self.q.popleft()
-            print(self.q[0].id)
+            self.need_update = True
         else:
             for s in self.q:
                 if stall_id == s.id:
                     self.q.remove(s)
 
     def __check_fov(self, obstacle):
-        bx, by = obstacle
+        bx, by = obstacle[1], obstacle[2]
         fov = math.cos(math.pi / 8)
         a = self.vx, self.vy 
         b = self.__normalize(bx - self.pos_x, by - self.pos_y)
 
         return self.__dot(a, b) > fov
 
-    def __check_collision(self, obstacle):
-        o_x, o_y = obstacle
-        p_x, p_y = self.pos_x, self.pos_y
-        t_x, t_y = self.q[0].x, self.q[0].y
+    def __build_poly(self, obstacle):
+        o_x, o_y = obstacle[1], obstacle[2]
 
-        c1x, c1y = o_x - 1, o_y - 1
-        c2x, c2y = o_x + 1, o_y - 1
-        c3x, c3y = o_x + 1, o_y + 1
-        c4x, c4y = o_x - 1, o_y + 1
+        poly = []
+        poly.append(vg.Point(o_x - 1.51, o_y - 1.51))
+        poly.append(vg.Point(o_x + 1.51, o_y - 1.51))
+        poly.append(vg.Point(o_x + 1.51, o_y + 1.51))
+        poly.append(vg.Point(o_x - 1.51, o_y + 1.51))
 
-        if self.intersection(c1x, c1y - 0.5, c2x, c2y - 0.5, p_x, p_y, t_x, t_y):
-            return True
-        if self.intersection(c2x + 0.5, c2y, c3x + 0.5, c3y, p_x, p_y, t_x, t_y):
-            return True
-        if self.intersection(c3x, c3y + 0.5, c4x, c4y + 0.5, p_x, p_y, t_x, t_y):
-            return True
-        if self.intersection(c4x - 0.5, c4y, c1x - 0.5, c1y, p_x, p_y, t_x, t_y):
-            return True
-
-        return False
-
+        return poly
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
+        polys = self.polys
+        cg = self.curr_g
+
         for o in obstacles:
-            if self.__check_fov(o) and self.__check_collision(o):
-                pass
+            if o not in polys:
+                polys[o] = self.__build_poly(o)
+
+            if self.__check_fov(o) and o not in cg:
+                cg.add(o)
+                self.need_update = True
+
+    def __update_vg(self):
+        p = list(map(lambda o: self.polys[o], self.curr_g))
+        self.graph.build(p, self.workers)
+
+    def __update_path(self):
+        path = self.path
+        s = vg.Point(self.pos_x, self.pos_y)
+        t = vg.Point(self.q[0].x, self.q[0].y)
+        new_path = self.graph.shortest_path(s, t)
+        path.clear()
+        for p in new_path[1:]:
+            path.append(p)
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.encounter = 15
-
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -128,23 +144,38 @@ class Player:
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
-        
         self.pos_x = pos_x
         self.pos_y = pos_y
+
+        if self.need_update:
+            self.__update_vg()
+            self.__update_path()
+            self.need_update = False
+
+        t = self.path[0]
+
+        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < 1:
+            self.path.popleft()
+
+        if self.lookup_timer == 0:
+            return 'lookup'
+        
+        self.lookup_timer -= 1
         
         return 'move'
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        if self.encounter > 0:
-            self.encounter -= 1
-        elif len(self.q) > 0:
-            vx = self.q[0].x - self.pos_x
-            vy = self.q[0].y - self.pos_y
+        if len(self.q) > 0:
+            t = self.path[0]
+            vx = t.x - self.pos_x
+            vy = t.y - self.pos_y
             self.sign_x = 1
             self.sign_y = 1
-            self.vx, self.vy = self.__normalize(vx, vy)
+            
+            self.vx, self.vy = self.__normalize(vx, vy) if self.__calc_distance(vx, vy, 0, 0) > 1 else (vx, vy)
+
         elif len(self.q) == 0:
             self.vx, self.vy = 0, 0
 
