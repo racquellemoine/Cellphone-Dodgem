@@ -1,11 +1,1 @@
 Player Moves
-TURN 1: Time taken: 7.3909759521484375e-06                   Action: Move to (16.38325135321779, 0.9236440874366767)
-TURN 2: Time taken: 5.245208740234375e-06                    Action: Move to (16.76650270643558, 1.8472881748733534)
-TURN 3: Time taken: 5.0067901611328125e-06                   Action: Move to (17.14975405965337, 2.77093226231003)
-TURN 4: Time taken: 5.7220458984375e-06                      Action: Move to (17.533005412871162, 3.694576349746707)
-TURN 5: Time taken: 6.4373016357421875e-06                   Action: Move to (17.916256766088953, 4.618220437183384)
-TURN 6: Time taken: 6.198883056640625e-06                    Action: Move to (18.299508119306743, 5.541864524620061)
-TURN 7: Time taken: 5.7220458984375e-06                      Action: Move to (18.682759472524534, 6.4655086120567375)
-TURN 8: Time taken: 8.344650268554688e-06                    Action: Move to (19.066010825742325, 7.3891526994934145)
-TURN 9: Time taken: 5.0067901611328125e-06                   Action: Move to (19.449262178960115, 8.312796786930091)
-TURN 10: Time taken: 5.0067901611328125e-06                   Action: Move to (19.832513532177906, 9.236440874366767) Collided with obstacle 83

@@ -1,11 +1,1 @@
 Player Moves
-TURN 1: Time taken: 5.9604644775390625e-06                   Action: Move to (99.72604985978518, 72.96174389557527)
-TURN 2: Time taken: 3.337860107421875e-06                    Action: Move to (99.45209971957036, 73.92348779115054)
-TURN 3: Time taken: 3.5762786865234375e-06                   Action: Move to (99.17814957935553, 74.8852316867258)
-TURN 4: Time taken: 3.337860107421875e-06                    Action: Move to (98.90419943914071, 75.84697558230107)
-TURN 5: Time taken: 3.814697265625e-06                       Action: Move to (98.63024929892589, 76.80871947787634)
-TURN 6: Time taken: 3.814697265625e-06                       Action: Move to (98.35629915871107, 77.7704633734516)
-TURN 7: Time taken: 3.337860107421875e-06                    Action: Move to (98.08234901849625, 78.73220726902687)
-TURN 8: Time taken: 5.7220458984375e-06                      Action: Move to (97.80839887828142, 79.69395116460214)
-TURN 9: Time taken: 3.337860107421875e-06                    Action: Move to (97.5344487380666, 80.65569506017741)
-TURN 10: Time taken: 4.291534423828125e-06                    Action: Move to (97.26049859785178, 81.61743895575268)

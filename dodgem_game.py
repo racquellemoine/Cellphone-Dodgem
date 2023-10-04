@@ -7,6 +7,7 @@ import random
 import numpy as np
 import fast_tsp
 import os
+import shutil
 
 import constants
 from players.default_player import Player as DefaultPlayer
@@ -26,108 +27,111 @@ class Stall():
 
 class DodgemGame(tk.Tk):
     def __init__(self, args):
-        try:
-            super().__init__()
+        # try:
+        super().__init__()
 
-            # checks
-            if args.gui == "False" or args.gui == "false":
-                self.gui = False
-            elif args.gui == "True" or args.gui == "true":
-                self.gui = True
-            else:
-                print("ERROR: Enter a valid gui argument (True/False)")
-                return
-            
-            if int(args.no_of_stalls) <= 0:
-                print("ERROR: Number of stalls has to be greater than 0")
-                return
-            
-            if int(args.no_to_visit) <= 0:
-                print("ERROR: Number of stalls to visit has to be greater than 0")
-                return
-            elif int(args.no_to_visit) > int(args.no_of_stalls):
-                print("ERROR: Number of stalls to visit has to be lesser than total number of stalls")
-                return
+        shutil.rmtree('logs')
+        os.mkdir("logs")
 
-            # seed
-            random.seed(int(args.seed))
-
-            # time
-            self.start_time = time.time()
-            self.iteration = 0
-            self.time_interval = 0
-
-            # arguments
-            self.no_of_stalls = int(args.no_of_stalls)
-            self.no_to_visit = int(args.no_to_visit)
-
-            if self.no_to_visit > self.no_of_stalls:
-                self.no_to_visit = self.no_of_stalls - 1
-
-            # stalls and obstacles
-            self.stalls = []
-            self.stalls_to_visit = []
-            self.obstacles = []
-
-            # player
-            self.players = []
-            self.player_states = []
-            self.num_players = len(args.players)
-
-            # tkinter canvas components (used for updating text and color)
-            self.player_comp = []
-            self.score_comp = []
-            self.circles = []
-            self.title_comp = None
-            self.header_comp = None
-
-            # distance matrix for stalls
-            self.dist_matrix = [[0] * self.no_of_stalls] * self.no_of_stalls
-            # np.zeros((self.no_of_stalls, self.no_of_stalls))
-
-            self.theta = int(args.theta)
-            self.T = 0
-
-            # log files
-            self.stall_log = os.path.join("logs", "stall.txt")
-            self.result_log = os.path.join("logs", "result.txt")
-            self.score_log = os.path.join("logs", "score.txt")
-
-            self.canvas_scale = int(math.floor(float(args.scale)))
-            self.canvas_height = 100 * self.canvas_scale
-            self.canvas_width = 100 * self.canvas_scale
-
-            with open(self.result_log, 'w') as f:
-                f.write("Results\n")
-
-            with open(self.stall_log, 'w') as f:
-                f.write("Stall Info\n")
-
-            with open(self.score_log, 'w') as f:
-                f.write("Score Info\n")
-            
-            self.turn_no = 1
-            self.turn_comp = None
-
-            self.game_state = "resume"
-
-            self._configure_game()
-            self.T, self.tsp_path = self.tsp()
-            self.T = self.theta * self.T
-            
-            if int(args.total_time) > 0:
-                self.T = int(args.total_time)
-            
-            self._create_players(args.players)
-            if self.gui:
-                self._render_frame()
-                self.bind("<KeyPress-Left>", lambda _: self._play_game())
-                self.mainloop()
-            else:
-                self._play_game()
-        except:
-            print("ERROR")
+        # checks
+        if args.gui == "False" or args.gui == "false":
+            self.gui = False
+        elif args.gui == "True" or args.gui == "true":
+            self.gui = True
+        else:
+            print("ERROR: Enter a valid gui argument (True/False)")
             return
+        
+        if int(args.no_of_stalls) <= 0:
+            print("ERROR: Number of stalls has to be greater than 0")
+            return
+        
+        if int(args.no_to_visit) <= 0:
+            print("ERROR: Number of stalls to visit has to be greater than 0")
+            return
+        elif int(args.no_to_visit) > int(args.no_of_stalls):
+            print("ERROR: Number of stalls to visit has to be lesser than total number of stalls")
+            return
+
+        # seed
+        random.seed(int(args.seed))
+
+        # time
+        self.start_time = time.time()
+        self.iteration = 0
+        self.time_interval = 0
+
+        # arguments
+        self.no_of_stalls = int(args.no_of_stalls)
+        self.no_to_visit = int(args.no_to_visit)
+
+        if self.no_to_visit > self.no_of_stalls:
+            self.no_to_visit = self.no_of_stalls - 1
+
+        # stalls and obstacles
+        self.stalls = []
+        self.stalls_to_visit = []
+        self.obstacles = []
+
+        # player
+        self.players = []
+        self.player_states = []
+        self.num_players = len(args.players)
+
+        # tkinter canvas components (used for updating text and color)
+        self.player_comp = []
+        self.score_comp = []
+        self.circles = []
+        self.title_comp = None
+        self.header_comp = None
+
+        # distance matrix for stalls
+        self.dist_matrix = [[0] * self.no_of_stalls] * self.no_of_stalls
+        # np.zeros((self.no_of_stalls, self.no_of_stalls))
+
+        self.theta = int(args.theta)
+        self.T = 0
+
+        # log files
+        self.stall_log = os.path.join("logs", "stall.txt")
+        self.result_log = os.path.join("logs", "result.txt")
+        self.score_log = os.path.join("logs", "score.txt")
+
+        self.canvas_scale = int(math.floor(float(args.scale)))
+        self.canvas_height = 100 * self.canvas_scale
+        self.canvas_width = 100 * self.canvas_scale
+
+        with open(self.result_log, 'w') as f:
+            f.write("Results\n")
+
+        with open(self.stall_log, 'w') as f:
+            f.write("Stall Info\n")
+
+        with open(self.score_log, 'w') as f:
+            f.write("Score Info\n")
+        
+        self.turn_no = 1
+        self.turn_comp = None
+
+        self.game_state = "resume"
+
+        self._configure_game()
+        self.T, self.tsp_path = self.tsp()
+        self.T = self.theta * self.T
+        
+        if int(args.total_time) > 0:
+            self.T = int(args.total_time)
+        
+        self._create_players(args.players)
+        if self.gui:
+            self._render_frame()
+            self.bind("<KeyPress-Left>", lambda _: self._play_game())
+            self.mainloop()
+        else:
+            self._play_game()
+        # except:
+        #     print("ERROR")
+        #     return
 
     def calculate_distance(self):
         # find distances between stalls
