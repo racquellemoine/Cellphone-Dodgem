@@ -93,6 +93,7 @@ class DodgemGame(tk.Tk):
         self.stall_log = os.path.join("logs", "stall.txt")
         self.result_log = os.path.join("logs", "result.txt")
         self.score_log = os.path.join("logs", "score.txt")
+        self.tsp_log = os.path.join("logs", "tsp.txt")
 
         self.canvas_scale = int(math.floor(float(args.scale)))
         self.canvas_height = 100 * self.canvas_scale
@@ -106,6 +107,9 @@ class DodgemGame(tk.Tk):
 
         with open(self.score_log, 'w') as f:
             f.write("Score Info\n")
+
+        with open(self.tsp_log, 'w') as f:
+            f.write("Travelling Salesman Path\n")
         
         self.turn_no = 1
         self.turn_comp = None
@@ -114,6 +118,8 @@ class DodgemGame(tk.Tk):
 
         self._configure_game()
         self.T, self.tsp_path = self.tsp()
+        with open(self.tsp_log, 'a') as f:
+            f.write(str(self.tsp_path))
         self.T = self.theta * self.T
         
         if int(args.total_time) > 0:
@@ -559,13 +565,10 @@ class DodgemGame(tk.Tk):
         return False
 
     def _play_game(self):
-        # Check if game is over over
+        # Check if game is over
         if self.iteration == self.T:
             self.game_state = "over"
             scores = self.compute_scores()
-
-            # s1 = "Items"
-            # s2 = "Satisfaction"
 
             s1 = "ID"
             s2 = "Team"
@@ -594,8 +597,9 @@ class DodgemGame(tk.Tk):
         
         self.iteration += 1
         new_positions = []
-        updates = []
+        update_move = []
         update_wait = []
+        interrupt = []
         logs = []
         
         for index, player in enumerate(self.players):
@@ -607,33 +611,57 @@ class DodgemGame(tk.Tk):
             if action == 'lookup':
                 other_players, stalls = self.lookup(self.player_states[index])
                 player.pass_lookup_info(other_players, stalls)
+                end_time = time.time()
                 new_positions.append([pos_x, pos_y])
-                updates.append(False)
+                update_move.append(False)
+                interrupt.append(True)
                 if self.player_states[index].wait == 0:
                     update_wait.append(False)
                 else:
                     update_wait.append(True)
-                end_time = time.time()
                 logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + "Action: Lookup")
-
 
             elif action == 'move':
                 new_pos_x, new_pos_y = player.get_next_move()
                 end_time = time.time()
                 if self.player_states[index].wait == 0:
+                    interrupt.append(False)
                     if self.compute_distance(pos_x, pos_y, new_pos_x, new_pos_y) <= 1.0005:
                         new_positions.append([new_pos_x, new_pos_y])
-                        updates.append(True)
+                        update_move.append(True)
                         logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ")")
                     else:
                         new_positions.append([pos_x, pos_y])
-                        updates.append(False)
+                        update_move.append(False)
+                        logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as distance > 1 unit")
+                    update_wait.append(False)
+                else:
+                    interrupt.append(True)
+                    update_wait.append(True)
+                    new_positions.append([pos_x, pos_y])
+                    update_move.append(False)
+                    logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as wait time = " + str(self.player_states[index].wait))
+        
+            elif action == 'lookup move':
+                other_players, stalls = self.lookup(self.player_states[index])
+                player.pass_lookup_info(other_players, stalls)
+                new_pos_x, new_pos_y = player.get_next_move()
+                end_time = time.time()
+                interrupt.append(True)
+                if self.player_states[index].wait == 0:
+                    if self.compute_distance(pos_x, pos_y, new_pos_x, new_pos_y) <= 1.0005:
+                        new_positions.append([new_pos_x, new_pos_y])
+                        update_move.append(True)
+                        logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ")")
+                    else:
+                        new_positions.append([pos_x, pos_y])
+                        update_move.append(False)
                         logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as distance > 1 unit")
                     update_wait.append(False)
                 else:
                     update_wait.append(True)
                     new_positions.append([pos_x, pos_y])
-                    updates.append(False)
+                    update_move.append(False)
                     logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as wait time = " + str(self.player_states[index].wait))
         
         # check collision with other players
@@ -646,12 +674,9 @@ class DodgemGame(tk.Tk):
                                             new_positions[j][0], new_positions[j][1]) or \
                         self.compute_distance(new_positions[i][0], new_positions[i][1], new_positions[j][0], new_positions[j][1]) <= 0.5:
                         
-                        updates[i] = False
+                        update_move[i] = False
+                        interrupt[i] = True
                         self.player_states[i].wait = 10
-                        if self.player_states[i].interaction > 0:
-                            val = math.log2(self.player_states[i].interaction)
-                            self.player_states[i].satisfaction += (self.player_states[i].interaction * val)
-                        self.player_states[i].interaction = 0
                         self.players[i].encounter_obstacle()
                         logs[i] += " Collided with Player id: " + str(other_player.id) + " name: " + str(other_player.name) + ": (" + str(new_positions[i][0]) + ", " + str(new_positions[i][1]) + ")"
 
@@ -661,7 +686,8 @@ class DodgemGame(tk.Tk):
                 collision = False
                 if player_state.wait == 0 and self.check_collision_obstacle(stall.id, stall.x, stall.y, player_state.pos_x, player_state.pos_y, \
                                                                             new_positions[i][0], new_positions[i][1], player_state.color):
-                    updates[i] = False
+                    update_move[i] = False
+                    interrupt[i] = True
                     logs[i] += " Collided with obstacle " + str(stall.id)
                     collision = True
 
@@ -693,9 +719,7 @@ class DodgemGame(tk.Tk):
                 if collision:
                     self.player_states[i].wait = 10
                     self.players[i].encounter_obstacle()
-                    if self.player_states[i].interaction > 0:
-                        self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
-                    self.player_states[i].interaction = 0
+                    interrupt[i] = True
 
         # collect items
         for i, player_state in enumerate(self.player_states):
@@ -705,17 +729,21 @@ class DodgemGame(tk.Tk):
                     self.players[i].collect_item(stall.id)
                     player_state.add_stall_visited(stall.id)
                     player_state.add_items(1)
-                    if self.player_states[i].interaction > 0:
-                        self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
-                    self.player_states[i].interaction = 0
+                    interrupt[i] = True
                     logs[i] += " Collected 1 item from stall " + str(stall.id)
                         
 
         # update positions
-        for i, update in enumerate(updates):
+        for i, update in enumerate(update_move):
             if update:
-                self.player_states[i].increment_interaction()
                 self.player_states[i].pos_x, self.player_states[i].pos_y = new_positions[i][0], new_positions[i][1]
+
+            if interrupt[i]:
+                if self.player_states[i].interaction > 0:
+                    self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
+                self.player_states[i].interaction = 0
+            else:
+                self.player_states[i].increment_interaction()
 
             if update_wait[i]:
                 self.player_states[i].wait -= 1
@@ -733,18 +761,18 @@ class DodgemGame(tk.Tk):
         # update player positions on game board
         if self.gui:
             for index, player_state in enumerate(self.player_states):
-                if updates[index]:
+                if update_move[index]:
                     self.canvas.moveto(self.player_comp[index], (player_state.pos_x + 0.5) * self.canvas_scale, (player_state.pos_y + 0.5) * self.canvas_scale)
                 self.canvas.itemconfigure(self.score_comp[index], text=str(index + 1).ljust(int(0.4 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " "))
                 
             self.canvas.itemconfigure(self.turn_comp, text="TURN: " + str(self.turn_no) + "/" + str(self.T))
 
-        for index, player_state in enumerate(self.player_states):
-            with open(player_state.log, 'a') as f:
+        with open(player_state.log, 'a') as f:
                 f.write("TURN " + str(self.turn_no) + ": " + logs[index] + "\n")
-    
-        with open(self.score_log, 'a') as f:
-            f.write(str(index + 1).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " ") + "\n")
+
+        for index, player_state in enumerate(self.player_states):
+            with open(self.score_log, 'a') as f:
+                f.write(str(index + 1).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " ") + "\n")
 
         self.turn_no += 1
         
