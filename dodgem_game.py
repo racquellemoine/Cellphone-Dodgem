@@ -517,7 +517,7 @@ class DodgemGame(tk.Tk):
                     other_players.append((player_state.id, player_state.pos_x, player_state.pos_y))
 
         for index, obstacle in enumerate(self.obstacles):
-            if self.compute_distance(player_state.pos_x, player_state.pos_y, obstacle.x, obstacle.y) <= 10:
+            if self.compute_distance(player.pos_x, player.pos_y, obstacle.x, obstacle.y) <= 10:
                 obstacles.append((obstacle.id, obstacle.x, obstacle.y))
         
         return other_players, obstacles
@@ -767,7 +767,8 @@ class DodgemGame(tk.Tk):
                 
             self.canvas.itemconfigure(self.turn_comp, text="TURN: " + str(self.turn_no) + "/" + str(self.T))
 
-        with open(player_state.log, 'a') as f:
+        for player_state in self.player_states:
+            with open(player_state.log, 'a') as f:
                 f.write("TURN " + str(self.turn_no) + ": " + logs[index] + "\n")
 
         for index, player_state in enumerate(self.player_states):
