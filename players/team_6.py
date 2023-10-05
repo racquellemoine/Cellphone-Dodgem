@@ -93,6 +93,12 @@ class Player:
         self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
         self.epsilon = 0.0005 # tolerance for reaching a checkpoint
 
+    # returns (x,y) of next stall we wanna visit
+    def __next_stall(self) -> Vector:
+        if len(self.stalls_next) == 0:
+            return Vector(0,0)
+        return self.stalls_next[0]
+    
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
         pass
