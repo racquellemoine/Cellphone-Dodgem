@@ -65,9 +65,6 @@ class DodgemGame(tk.Tk):
         self.no_of_stalls = int(args.no_of_stalls)
         self.no_to_visit = int(args.no_to_visit)
 
-        if self.no_to_visit > self.no_of_stalls:
-            self.no_to_visit = self.no_of_stalls - 1
-
         # stalls and obstacles
         self.stalls = []
         self.stalls_to_visit = []
@@ -125,13 +122,9 @@ class DodgemGame(tk.Tk):
         self._create_players(args.players)
         if self.gui:
             self._render_frame()
-            self.bind("<KeyPress-Left>", lambda _: self._play_game())
             self.mainloop()
         else:
             self._play_game()
-        # except:
-        #     print("ERROR")
-        #     return
 
     def calculate_distance(self):
         # find distances between stalls
@@ -235,12 +228,12 @@ class DodgemGame(tk.Tk):
 
         # create randomized positions
         perimeter = 400
-        mod = math.ceil(perimeter / no_of_players)
+        mod = math.floor(perimeter / no_of_players)
         positions = []
 
         for i in range(no_of_players):
             pos = mod * i + random.randint(1, mod)
-            if 0 < pos <= 100:
+            if 0 <= pos <= 100:
                 pos_x = 0
                 pos_y = pos
             elif 100 < pos <= 200:
@@ -268,38 +261,38 @@ class DodgemGame(tk.Tk):
 
         for index, name in enumerate(player_names):
             if name == '1':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player1(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player1(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '2':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player2(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player2(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '3':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player3(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player3(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '4':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player4(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player4(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '5':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player5(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player5(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '6':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player6(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player6(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             else:
-                state = PlayerState(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = DefaultPlayer(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = DefaultPlayer(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
 
