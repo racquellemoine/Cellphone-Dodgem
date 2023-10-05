@@ -8,6 +8,7 @@ import numpy as np
 import fast_tsp
 import os
 import shutil
+import Pmw
 
 import constants
 from players.default_player import Player as DefaultPlayer
@@ -324,6 +325,8 @@ class DodgemGame(tk.Tk):
             y = player_state.pos_y + 1
             color = player_state.color
             p = self.canvas.create_oval((x - 0.5) * self.canvas_scale, (y - 0.5) * self.canvas_scale, (x + 0.5) * self.canvas_scale, (y + 0.5) * self.canvas_scale, fill=color)
+            balloon = Pmw.Balloon()
+            balloon.tagbind(self.canvas, p, 'Player ' + str(index + 1))
             self.player_comp.append(p)
 
         self.turn_comp = self.canvas.create_text((131) * self.canvas_scale, (14) * self.canvas_scale, anchor="nw", font=('freemono', int(1.8 * self.canvas_scale), 'bold'), text="TURN: " + str(self.turn_no) + "/" + str(self.T))
