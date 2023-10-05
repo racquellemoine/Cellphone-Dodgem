@@ -15,7 +15,7 @@ class Player:
         self.num_players = num_players
         self.obstacles_list= []
         self.other_players_list= []
-
+        #Hey Steve was here
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
 
