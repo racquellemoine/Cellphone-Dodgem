@@ -100,10 +100,10 @@ class Player:
         o_x, o_y = obstacle[1], obstacle[2]
 
         poly = []
-        poly.append(vg.Point(o_x - 1.51, o_y - 1.51))
-        poly.append(vg.Point(o_x + 1.51, o_y - 1.51))
-        poly.append(vg.Point(o_x + 1.51, o_y + 1.51))
-        poly.append(vg.Point(o_x - 1.51, o_y + 1.51))
+        poly.append(vg.Point(o_x - 2, o_y - 2))
+        poly.append(vg.Point(o_x + 2, o_y - 2))
+        poly.append(vg.Point(o_x + 2, o_y + 2))
+        poly.append(vg.Point(o_x - 2, o_y + 2))
 
         return poly
 
@@ -116,26 +116,32 @@ class Player:
         for o in obstacles:
             if o not in polys:
                 polys[o] = self.__build_poly(o)
-
-            if self.__check_fov(o) and o not in cg:
                 cg.add(o)
                 self.need_update = True
+        #print(polys)
+        #print(cg)
 
     def __update_vg(self):
+        if not self.curr_g:
+            return
         p = list(map(lambda o: self.polys[o], self.curr_g))
         self.graph.build(p, self.workers)
 
     def __update_path(self):
-        path = self.path
+        self.path.clear()
         s = vg.Point(self.pos_x, self.pos_y)
         t = vg.Point(self.q[0].x, self.q[0].y)
-        new_path = self.graph.shortest_path(s, t)
-        path.clear()
+        if not self.curr_g:
+            new_path = [s, t]
+        else:
+            new_path = self.graph.shortest_path(s, t)
         for p in new_path[1:]:
-            path.append(p)
+            self.path.append(p)
+        #print(self.path)
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
+        self.need_update = True
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -147,6 +153,9 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
 
+        if len(self.q) == 0:
+            return 'move'
+
         if self.need_update:
             self.__update_vg()
             self.__update_path()
@@ -154,10 +163,12 @@ class Player:
 
         t = self.path[0]
 
-        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < 1:
+        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < 1e-5:
             self.path.popleft()
 
         if self.lookup_timer == 0:
+            self.lookup_timer = 10
+
             return 'lookup'
         
         self.lookup_timer -= 1
