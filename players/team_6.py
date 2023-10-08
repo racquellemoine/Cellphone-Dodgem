@@ -1,5 +1,6 @@
 import math
 import random
+import fast_tsp
 
 random.seed(2)
 
@@ -92,6 +93,28 @@ class Player:
         self.dir = Vector(1, 0) # unit vector representing direction of movement
         self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
         self.epsilon = 0.0005 # tolerance for reaching a checkpoint
+        self.__tsp()
+    
+    def __tsp(self):
+        stalls = self.all_stalls
+        num = len(self.all_stalls)
+        distances = [[0 for _ in range(num + 1)] for _ in range(num + 1)]
+
+        for i in range(num):
+            currVector =  Vector(stalls[i].x, stalls[i].y)
+            dist = self.pos.dist2(currVector)
+            distances[0][i+1] = math.ceil(dist)
+
+        for i in range(num):
+            for j in range(num):
+                currVector1 = Vector(stalls[i].x, stalls[i].y)
+                currVector2 = Vector(stalls[j].x, stalls[j].y)
+                dist = currVector1.dist2(currVector2)
+                distances[i+1][j+1] = math.ceil(dist)
+                
+        self.tsp_path = fast_tsp.find_tour(distances)
+        for i in self.tsp_path[1:]:
+            self.stalls_next.append(Vector(self.all_stalls[i-1].x, self.all_stalls[i-1].x))
 
     # returns (x,y) of next stall we wanna visit
     def __next_stall(self) -> Vector:
@@ -101,6 +124,9 @@ class Player:
     
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
+        #if you are at the next stall to visit, collect the item and remove the stall from the list
+        if stall_id.x == self.stalls_next[0].x and stall_id.y == self.stalls_next[0].y:
+            self.stalls_next.pop(0)
         pass
 
     # simulator calls this function when it passes the lookup information
@@ -116,7 +142,7 @@ class Player:
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
-        
+        return 'move'
         pass
     
     # simulator calls this function to get the next move from the player
