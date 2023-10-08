@@ -39,7 +39,9 @@ class Player:
         self.goal_stall = None
 
         return stall_id
-
+        
+    def end_game_tactic(self):
+        get_action(1,1)
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
@@ -309,6 +311,10 @@ class Player:
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
 
+        # Currently if time is less than 10 second 
+        if self.T_theta <= 10 or not self.stalls_to_visit:
+            self.end_game_tactic()
+            
         closest_stall = None
         min_distance = float('inf')
 
