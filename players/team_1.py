@@ -41,7 +41,7 @@ class Player:
         return stall_id
         
     def end_game_tactic(self):
-        get_action(1,1)
+        get_action(0,0)
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
