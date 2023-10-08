@@ -40,12 +40,34 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.obstacles_loc.add((self.pos_x, self.pos_y))
+        # assumption is that we have already looked around and added our obstacles to the path
+        # if self.pos_x
 
-        self.vx = random.random()
-        self.vy = math.sqrt(1 - self.vx**2)
-        self.sign_x *= -1
-        self.sign_y *= -1
+        def generate_deltas():
+            delta_x = random.choice([-1, 1])
+            delta_y = random.choice([-1, 1])
+
+            delta_x += self.pos_x
+            delta_y += self.pos_y
+
+            return delta_x, delta_y
+
+        delta_x, delta_y = generate_deltas()
+
+        while (delta_x, delta_y) in self.obstacles_loc:
+            delta_x, delta_y = generate_deltas()
+
+        angle = math.atan(numpy.abs(delta_y)/numpy.abs(delta_x))
+        delta_vy = math.sin(angle)
+        delta_vx = math.cos(angle)
+
+        if (self.pos_x, self.pos_y) in self.obstacles_loc:
+            # if true, then we must move and reroute tsp after doing some exploration
+            return delta_vx, delta_vy, True
+        else:
+            # if false, then there is a chance that we ran into a player and we may not need to reroute tsp
+            return delta_vx, delta_vy, False
+
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
