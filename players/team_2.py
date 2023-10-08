@@ -26,6 +26,9 @@ class Player:
         self.original_pos_x = initial_pos_x
         self.original_pos_y = initial_pos_y
 
+        self.turn_counter = 0
+        self.discovered_region = [[-1]*101] * 101
+
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
         pass
@@ -48,9 +51,41 @@ class Player:
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
 
+        self.turn_counter += 1
+
         self.pos_x = pos_x
         self.pos_y = pos_y
+        # print(f"<pos_x, pos_y>: <{pos_x}, {pos_y}>")
 
+        # a function that checkes if the current position is near an undiscovered region.
+        def should_lookup():
+            # all possible 8 directions to move from the current position
+            _x = [0, 1, 1,  1,  0, -1, -1, -1]
+            _y = [1, 1, 0, -1, -1, -1,  0,  1]
+
+            for x_move, y_move in zip(_x, _y):
+                # Check for out of bound situations
+                curr_x = min(max(pos_x + x_move, 99), 0)
+                curr_y = min(max(pos_y + y_move, 99), 0)
+
+                if self.discovered_region[curr_x][curr_y] == -1:
+                    return True # i.e. we should look up
+
+            # otherwise, don't look up
+            return False
+
+        # check if the current position
+        # a) is not discovered yet
+        if self.discovered_region[pos_x][pos_y] == -1:
+            # print(self.turn_counter, 'Lookup')
+            return 'lookup'
+
+        # b) within the already discovered region, but about to go to an undiscovered region (+- 1 units)
+        elif should_lookup():
+            # print(self.turn_counter, 'Lookup')
+            return 'lookup'
+        # otherwise move
+        # print(self.turn_counter, 'move')
         return 'move'
 
     # simulator calls this function to get the next move from the player
