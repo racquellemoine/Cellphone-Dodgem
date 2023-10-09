@@ -1,5 +1,6 @@
 import math
 import random
+import numpy
 random.seed(2)
 
 
@@ -41,9 +42,9 @@ class Player:
     def pass_lookup_info(self, other_players, obstacles):
         print('players', other_players)
         for obstacle, x, y in obstacles:
-            self.obstacle_board[obstacle] = (x,y)
-        for player, x, y in other_players: 
-            self.players_board[player] = (x,y)
+            self.obstacle_board[obstacle] = (x, y)
+        for player, x, y in other_players:
+            self.players_board[player] = (x, y)
 
         print('obstacles', self.obstacle_board)
         print('players', self.players_board)
@@ -79,8 +80,8 @@ class Player:
             # if false, then there is a chance that we ran into a player and we may not need to reroute tsp
             return delta_vx, delta_vy, False
 
-
     # simulator calls this function to get the action 'lookup' or 'move' from the player
+
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
 
@@ -102,7 +103,7 @@ class Player:
                 curr_y = min(max(pos_y + y_move, 99), 0)
 
                 if self.discovered_region[curr_x][curr_y] == -1:
-                    return True # i.e. we should look up
+                    return True  # i.e. we should look up
 
             # otherwise, don't look up
             return False
