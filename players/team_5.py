@@ -85,13 +85,14 @@ class Player:
             self.q.popleft()
             if len(self.q) > 0:
                 self.__update_path()
+                self.lookup_timer = 0
         else:
-            r = []
+            r = None 
             for s in self.q:
                 if stall_id == s.id:
-                    r.append(s)
-            for s in r:
-                self.q.remove(s)
+                    r = s
+                    break
+            self.q.remove(r)
 
     def __check_fov(self, obstacle):
         bx, by = obstacle[1], obstacle[2]
@@ -142,6 +143,7 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         self.collision = 15
+        self.lookup_timer = 0
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -167,7 +169,7 @@ class Player:
             self.path.popleft()
 
         if self.lookup_timer == 0:
-            self.lookup_timer = 10
+            self.lookup_timer = 45
 
             return 'lookup'
         
