@@ -29,6 +29,9 @@ class Player:
         self.turn_counter = 0
         self.discovered_region = [[-1]*101] * 101
 
+        self.obstacle_board = {}
+        self.players_board = {}
+
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
         pass
@@ -36,6 +39,14 @@ class Player:
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
+        print('players', other_players)
+        for obstacle, x, y in obstacles:
+            self.obstacle_board[obstacle] = (x,y)
+        for player, x, y in other_players: 
+            self.players_board[player] = (x,y)
+
+        print('obstacles', self.obstacle_board)
+        print('players', self.players_board)
         pass
 
     # simulator calls this function when the player encounters an obstacle
