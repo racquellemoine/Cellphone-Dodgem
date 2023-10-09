@@ -1,5 +1,7 @@
 import math
 import random
+import fast_tsp
+from collections import deque
 
 import constants
 
@@ -23,6 +25,22 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
+        #Added functionality 
+        self.distance_grid = []
+        for i in range(len(stalls_to_visit) + 1):
+            row = []
+            for j in range(len(stalls_to_visit) + 1):
+                row.append(0)
+
+            # Add the row to the list
+            self.distance_grid.append(row)
+        
+        self.queue = deque()
+        self.goal_stall = None
+
+        self.set_tsp_path()
+        self.set_queue()
+        
         self.obstacles_list = []
         self.other_players_list = []
         self.goal_stall = None
@@ -31,6 +49,25 @@ class Player:
         YDIM = constants.vis_width
 
     # simulator calls this function when the player collects an item from a stall
+    
+    def set_queue(self):
+        for i in self.tsp_path[1:]:
+            self.queue.append(self.stalls_to_visit[i-1])
+
+    def set_tsp_path(self):
+        s_to_v = self.stalls_to_visit
+
+        for i in range(len(s_to_v)):
+            distance1 = math.sqrt((self.pos_x- s_to_v[i].x)**2 + (self.pos_y - s_to_v[i].y)**2)
+            self.distance_grid[0][i+1] = math.ceil(distance1)
+            for j in range(len(s_to_v)):
+                distance2 = math.sqrt((s_to_v[i].x-s_to_v[j].x)**2 + (s_to_v[i].y - s_to_v[j].y)**2)
+                self.distance_grid[i+1][j+1] = math.ceil(distance2)
+
+        self.tsp_path = fast_tsp.find_tour(self.distance_grid)
+        print("THIS IS THE PATH", self.tsp_path)
+
+    
     def collect_item(self, stall_id):
         for stall in self.stalls_to_visit:
             if stall.id == stall_id:
