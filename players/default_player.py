@@ -38,7 +38,7 @@ class Player:
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
-        # return 'lookup' or 'move'
+        # return 'lookup' or 'move' or 'lookup move'
         
         self.pos_x = pos_x
         self.pos_y = pos_y

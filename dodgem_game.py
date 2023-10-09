@@ -7,6 +7,8 @@ import random
 import numpy as np
 import fast_tsp
 import os
+import shutil
+import Pmw
 
 import constants
 from players.default_player import Player as DefaultPlayer
@@ -26,106 +28,110 @@ class Stall():
 
 class DodgemGame(tk.Tk):
     def __init__(self, args):
-        try:
-            super().__init__()
+        # try:
+        super().__init__()
 
-            # checks
-            if args.gui == "False" or args.gui == "false":
-                self.gui = False
-            elif args.gui == "True" or args.gui == "true":
-                self.gui = True
-            else:
-                print("ERROR: Enter a valid gui argument (True/False)")
-                return
-            
-            if int(args.no_of_stalls) <= 0:
-                print("ERROR: Number of stalls has to be greater than 0")
-                return
-            
-            if int(args.no_to_visit) <= 0:
-                print("ERROR: Number of stalls to visit has to be greater than 0")
-                return
-            elif int(args.no_to_visit) > int(args.no_of_stalls):
-                print("ERROR: Number of stalls to visit has to be lesser than total number of stalls")
-                return
+        shutil.rmtree('logs')
+        os.mkdir("logs")
 
-            # seed
-            random.seed(int(args.seed))
-
-            # time
-            self.start_time = time.time()
-            self.iteration = 0
-            self.time_interval = 0
-
-            # arguments
-            self.no_of_stalls = int(args.no_of_stalls)
-            self.no_to_visit = int(args.no_to_visit)
-
-            if self.no_to_visit > self.no_of_stalls:
-                self.no_to_visit = self.no_of_stalls - 1
-
-            # stalls and obstacles
-            self.stalls = []
-            self.stalls_to_visit = []
-            self.obstacles = []
-
-            # player
-            self.players = []
-            self.player_states = []
-            self.num_players = len(args.players)
-
-            # tkinter canvas components (used for updating text and color)
-            self.player_comp = []
-            self.score_comp = []
-            self.circles = []
-            self.title_comp = None
-            self.header_comp = None
-
-            # distance matrix for stalls
-            self.dist_matrix = [[0] * self.no_of_stalls] * self.no_of_stalls
-            # np.zeros((self.no_of_stalls, self.no_of_stalls))
-
-            self.theta = int(args.theta)
-            self.T = 0
-
-            # log files
-            self.stall_log = os.path.join("logs", "stall.txt")
-            self.result_log = os.path.join("logs", "result.txt")
-            self.score_log = os.path.join("logs", "score.txt")
-
-
-            with open(self.result_log, 'w') as f:
-                f.write("Results\n")
-
-            with open(self.stall_log, 'w') as f:
-                f.write("Stall Info\n")
-
-            with open(self.score_log, 'w') as f:
-                f.write("Score Info\n")
-            
-            self.turn_no = 1
-            self.turn_comp = None
-
-            self.game_state = "resume"
-
-            self._configure_game()
-            self.T, self.tsp_path = self.tsp()
-            self.T = self.theta * self.T
-            
-            if int(args.total_time) > 0:
-                self.T = int(args.total_time)
-            
-            self._create_players(args.players)
-            print(self.gui)
-            if self.gui:
-                self._render_frame()
-                self.bind("<KeyPress-Left>", lambda _: self._play_game(args.gui))
-                self.mainloop()
-            else:
-                self._play_game()
-        except:
-            print("ERROR")
+        # checks
+        if args.gui == "False" or args.gui == "false":
+            self.gui = False
+        elif args.gui == "True" or args.gui == "true":
+            self.gui = True
+        else:
+            print("ERROR: Enter a valid gui argument (True/False)")
             return
+        
+        if int(args.no_of_stalls) <= 0:
+            print("ERROR: Number of stalls has to be greater than 0")
+            return
+        
+        if int(args.no_to_visit) <= 0:
+            print("ERROR: Number of stalls to visit has to be greater than 0")
+            return
+        elif int(args.no_to_visit) > int(args.no_of_stalls):
+            print("ERROR: Number of stalls to visit has to be lesser than total number of stalls")
+            return
+
+        # seed
+        random.seed(int(args.seed))
+
+        # time
+        self.start_time = time.time()
+        self.iteration = 0
+        self.time_interval = 0
+
+        # arguments
+        self.no_of_stalls = int(args.no_of_stalls)
+        self.no_to_visit = int(args.no_to_visit)
+
+        # stalls and obstacles
+        self.stalls = []
+        self.stalls_to_visit = []
+        self.obstacles = []
+
+        # player
+        self.players = []
+        self.player_states = []
+        self.num_players = len(args.players)
+
+        # tkinter canvas components (used for updating text and color)
+        self.player_comp = []
+        self.score_comp = []
+        self.circles = []
+        self.title_comp = None
+        self.header_comp = None
+
+        # distance matrix for stalls
+        self.dist_matrix = [[0] * self.no_of_stalls] * self.no_of_stalls
+        # np.zeros((self.no_of_stalls, self.no_of_stalls))
+
+        self.theta = int(args.theta)
+        self.T = 0
+
+        # log files
+        self.stall_log = os.path.join("logs", "stall.txt")
+        self.result_log = os.path.join("logs", "result.txt")
+        self.score_log = os.path.join("logs", "score.txt")
+        self.tsp_log = os.path.join("logs", "tsp.txt")
+
+        self.canvas_scale = int(math.floor(float(args.scale)))
+        self.canvas_height = 100 * self.canvas_scale
+        self.canvas_width = 100 * self.canvas_scale
+
+        with open(self.result_log, 'w') as f:
+            f.write("Results\n")
+
+        with open(self.stall_log, 'w') as f:
+            f.write("Stall Info\n")
+
+        with open(self.score_log, 'w') as f:
+            f.write("Score Info\n")
+
+        with open(self.tsp_log, 'w') as f:
+            f.write("Travelling Salesman Path\n")
+        
+        self.turn_no = 1
+        self.turn_comp = None
+
+        self.game_state = "resume"
+
+        self._configure_game()
+        self.T, self.tsp_path = self.tsp()
+        with open(self.tsp_log, 'a') as f:
+            f.write(str(self.tsp_path))
+        self.T = self.theta * self.T
+        
+        if int(args.total_time) > 0:
+            self.T = int(args.total_time)
+        
+        self._create_players(args.players)
+        if self.gui:
+            self._render_frame()
+            self.mainloop()
+        else:
+            self._play_game()
 
     def calculate_distance(self):
         # find distances between stalls
@@ -165,13 +171,13 @@ class DodgemGame(tk.Tk):
             x = random.uniform(0, 100)
             y = random.uniform(0, 100)
             # avoid overlapping stalls
-            while canvas.find_overlapping(x * constants.canvas_scale, y * constants.canvas_scale, \
-                                        (x + constants.stall_size) * constants.canvas_scale, (y + constants.stall_size) * constants.canvas_scale) or \
+            while canvas.find_overlapping(x * self.canvas_scale, y * self.canvas_scale, \
+                                        (x + constants.stall_size) * self.canvas_scale, (y + constants.stall_size) * self.canvas_scale) or \
                                         x > 97 or y > 97 or x < 1 or y < 1:
                 x = random.uniform(0, 100)
                 y = random.uniform(0, 100)
             self.stalls.append(Stall(count + 1, x + constants.stall_size / 2, y + constants.stall_size / 2))
-            canvas.create_rectangle(x * constants.canvas_scale, y * constants.canvas_scale, (x + constants.stall_size) * constants.canvas_scale, (y + constants.stall_size) * constants.canvas_scale, outline="black", fill="white", width=1)
+            canvas.create_rectangle(x * self.canvas_scale, y * self.canvas_scale, (x + constants.stall_size) * self.canvas_scale, (y + constants.stall_size) * self.canvas_scale, outline="black", fill="white", width=1)
             count += 1
 
         # stalls to visit by players
@@ -229,12 +235,12 @@ class DodgemGame(tk.Tk):
 
         # create randomized positions
         perimeter = 400
-        mod = math.ceil(perimeter / no_of_players)
+        mod = math.floor(perimeter / no_of_players)
         positions = []
 
         for i in range(no_of_players):
             pos = mod * i + random.randint(1, mod)
-            if 0 < pos <= 100:
+            if 0 <= pos <= 100:
                 pos_x = 0
                 pos_y = pos
             elif 100 < pos <= 200:
@@ -262,68 +268,70 @@ class DodgemGame(tk.Tk):
 
         for index, name in enumerate(player_names):
             if name == '1':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player1(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player1(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '2':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player2(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player2(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '3':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player3(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player3(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '4':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player4(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player4(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '5':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player5(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player5(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             elif name == '6':
-                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = Player6(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = Player6(index + 1, name, colors[name], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
             else:
-                state = PlayerState(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path)
-                player = DefaultPlayer(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit, self.T, self.tsp_path, self.num_players)
+                state = PlayerState(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:])
+                player = DefaultPlayer(index + 1, name, colors['d'], positions[index][0], positions[index][1], self.stalls_to_visit[:], self.T, self.tsp_path[:], self.num_players)
                 self.players.append(player)
                 self.player_states.append(state)
 
     def _render_frame(self):
-        self.canvas = tk.Canvas(self, height=constants.vis_height + 2 * constants.canvas_scale, width=constants.vis_width + 80 * constants.canvas_scale, bg="#ADD8E6")
-        self.canvas.create_rectangle(1 * constants.canvas_scale, 1 * constants.canvas_scale, constants.vis_height + 1 * constants.canvas_scale, constants.vis_width + 1 * constants.canvas_scale, outline="#000000", fill="white", width=1)
+        self.canvas = tk.Canvas(self, height=self.canvas_height + 2 * self.canvas_scale, width=self.canvas_width + 80 * self.canvas_scale, bg="#ADD8E6")
+        self.canvas.create_rectangle(self.canvas_scale, self.canvas_scale, self.canvas_height + 1 * self.canvas_scale, self.canvas_width + 1 * self.canvas_scale, outline="#000000", fill="white", width=1)
 
         # render stalls
         for stall in self.stalls_to_visit:
             x = stall.x + 1
             y = stall.y + 1
-            self.canvas.create_rectangle((x - constants.stall_size / 2) * constants.canvas_scale, (y - constants.stall_size / 2) * constants.canvas_scale, (x + constants.stall_size / 2) * constants.canvas_scale, (y + constants.stall_size / 2) * constants.canvas_scale, outline="#0e9cef", fill="#0e9cef", width=1)
-            self.canvas.create_text((x) * constants.canvas_scale, (y) * constants.canvas_scale, font=('freemono', 11, 'bold'), text=stall.id)
+            self.canvas.create_rectangle((x - constants.stall_size / 2) * self.canvas_scale, (y - constants.stall_size / 2) * self.canvas_scale, (x + constants.stall_size / 2) * self.canvas_scale, (y + constants.stall_size / 2) * self.canvas_scale, outline="#0e9cef", fill="#0e9cef", width=1)
+            self.canvas.create_text((x) * self.canvas_scale, (y) * self.canvas_scale, font=('freemono', 11, 'bold'), text=stall.id)
 
         for stall in self.obstacles:
             x = stall.x + 1
             y = stall.y + 1
-            self.canvas.create_rectangle((x - constants.stall_size / 2) * constants.canvas_scale, (y - constants.stall_size / 2) * constants.canvas_scale, (x + constants.stall_size / 2) * constants.canvas_scale, (y + constants.stall_size / 2) * constants.canvas_scale, outline="#ff9695", fill="#ff9695", width=1)
-            self.canvas.create_text((x) * constants.canvas_scale, (y) * constants.canvas_scale, font=('freemono', 11, 'bold'), text=stall.id)
+            self.canvas.create_rectangle((x - constants.stall_size / 2) * self.canvas_scale, (y - constants.stall_size / 2) * self.canvas_scale, (x + constants.stall_size / 2) * self.canvas_scale, (y + constants.stall_size / 2) * self.canvas_scale, outline="#ff9695", fill="#ff9695", width=1)
+            self.canvas.create_text((x) * self.canvas_scale, (y) * self.canvas_scale, font=('freemono', 11, 'bold'), text=stall.id)
 
         for index, player_state in enumerate(self.player_states):
             x = player_state.pos_x + 1
             y = player_state.pos_y + 1
             color = player_state.color
-            p = self.canvas.create_oval((x - 0.5) * constants.canvas_scale, (y - 0.5) * constants.canvas_scale, (x + 0.5) * constants.canvas_scale, (y + 0.5) * constants.canvas_scale, fill=color)
+            p = self.canvas.create_oval((x - 0.5) * self.canvas_scale, (y - 0.5) * self.canvas_scale, (x + 0.5) * self.canvas_scale, (y + 0.5) * self.canvas_scale, fill=color)
+            balloon = Pmw.Balloon()
+            balloon.tagbind(self.canvas, p, 'Player ' + str(index + 1))
             self.player_comp.append(p)
 
-        self.turn_comp = self.canvas.create_text((131) * constants.canvas_scale, (14) * constants.canvas_scale, anchor="nw", font=('freemono', 18, 'bold'), text="TURN: " + str(self.turn_no) + "/" + str(self.T))
+        self.turn_comp = self.canvas.create_text((131) * self.canvas_scale, (14) * self.canvas_scale, anchor="nw", font=('freemono', int(1.8 * self.canvas_scale), 'bold'), text="TURN: " + str(self.turn_no) + "/" + str(self.T))
 
-        self.title_comp = self.canvas.create_text((133) * constants.canvas_scale, (19) * constants.canvas_scale, anchor="nw", font=('freemono', 18, 'bold'), text="SCORES")
+        self.title_comp = self.canvas.create_text((133) * self.canvas_scale, (19) * self.canvas_scale, anchor="nw", font=('freemono', int(1.8 * self.canvas_scale), 'bold'), text="SCORES")
         
 
         s1 = "ID"
@@ -331,25 +339,25 @@ class DodgemGame(tk.Tk):
         s3 = "Interaction"
         s4 = "Satisfaction"
         s5 = "Items"
-        self.header_comp = self.canvas.create_text((110) * constants.canvas_scale, (24) * constants.canvas_scale, anchor="nw", font=('freemono', 15, 'bold'), text=s1.ljust(4, " ") + s2.ljust(10, " ") + s5.ljust(12, " ") + s3.ljust(15, " ") + s4.ljust(15, " ") + "\n")
+        self.header_comp = self.canvas.create_text((110) * self.canvas_scale, (24) * self.canvas_scale, anchor="nw", font=('freemono', int(1.5 * self.canvas_scale), 'bold'), text=s1.ljust(int(0.4 * self.canvas_scale), " ") + s2.ljust(int(1 * self.canvas_scale), " ") + s5.ljust(int(1.2 * self.canvas_scale), " ") + s3.ljust(int(1.5 * self.canvas_scale), " ") + s4.ljust(int(1.5 * self.canvas_scale), " ") + "\n")
             
             
         
         for index, player_state in enumerate(self.player_states):
-            s = self.canvas.create_text((110) * constants.canvas_scale, (5 * index + 29) * constants.canvas_scale, font=('freemono', 15, 'bold'), anchor="nw", text=str(index + 1).ljust(4, " ") + str(player_state.name).ljust(10, " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(12, " ") + str(player_state.interaction).ljust(15, " ") + str(round(player_state.satisfaction, 2)).ljust(15, " "))
-            c = self.canvas.create_oval((107 - 0.8) * constants.canvas_scale, (5 * index + 31 - 0.8) * constants.canvas_scale, (107 + 0.2) * constants.canvas_scale, \
-            (5 * index + 31 + 0.2) * constants.canvas_scale, fill=player_state.color)
+            s = self.canvas.create_text((110) * self.canvas_scale, (5 * index + 29) * self.canvas_scale, font=('freemono', int(1.5 * self.canvas_scale), 'bold'), anchor="nw", text=str(index + 1).ljust(int(0.4 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " "))
+            c = self.canvas.create_oval((107 - 0.8) * self.canvas_scale, (5 * index + 31 - 0.8) * self.canvas_scale, (107 + 0.2) * self.canvas_scale, \
+            (5 * index + 31 + 0.2) * self.canvas_scale, fill=player_state.color)
             self.score_comp.append(s)
             self.circles.append(c)
 
-        pause_btn = Button(self.canvas, width=4, height=3, bd='10', command=self.pause, font=('freemono', 13, 'bold'), text ="PAUSE")
-        pause_btn.place(x=1250, y=30)
+        pause_btn = Button(self.canvas, width=int(0.4 * self.canvas_scale), height=int(0.3 * self.canvas_scale), bd='10', command=self.pause, font=('freemono', int(1.3 * self.canvas_scale), 'bold'), text ="PAUSE")
+        pause_btn.place(x=125 * self.canvas_scale, y=0.3 * self.canvas_scale)
 
-        resume_btn = Button(self.canvas, width=4, height=3, bd='10', command=self.resume, font=('freemono', 13, 'bold'), text ="START/\nRESUME")
-        resume_btn.place(x=1350, y=30)
+        resume_btn = Button(self.canvas, width=int(0.4 * self.canvas_scale), height=int(0.3 * self.canvas_scale), bd='10', command=self.resume, font=('freemono', int(1.3 * self.canvas_scale), 'bold'), text ="START/\nRESUME")
+        resume_btn.place(x=135 * self.canvas_scale, y=0.3 * self.canvas_scale)
 
-        step_btn = Button(self.canvas, width=4, height=3, bd='10', command=self.step, font=('freemono', 13, 'bold'), text ="STEP")
-        step_btn.place(x=1450, y=30)
+        step_btn = Button(self.canvas, width=int(0.4 * self.canvas_scale), height=int(0.3 * self.canvas_scale), bd='10', command=self.step, font=('freemono', int(1.3 * self.canvas_scale), 'bold'), text ="STEP")
+        step_btn.place(x=145 * self.canvas_scale, y=0.3 * self.canvas_scale)
             
         self.canvas.pack()
 
@@ -512,7 +520,7 @@ class DodgemGame(tk.Tk):
                     other_players.append((player_state.id, player_state.pos_x, player_state.pos_y))
 
         for index, obstacle in enumerate(self.obstacles):
-            if self.compute_distance(player_state.pos_x, player_state.pos_y, obstacle.x, obstacle.y) <= 10:
+            if self.compute_distance(player.pos_x, player.pos_y, obstacle.x, obstacle.y) <= 10:
                 obstacles.append((obstacle.id, obstacle.x, obstacle.y))
         
         return other_players, obstacles
@@ -560,13 +568,10 @@ class DodgemGame(tk.Tk):
         return False
 
     def _play_game(self):
-        # Check if game is over over
+        # Check if game is over
         if self.iteration == self.T:
             self.game_state = "over"
             scores = self.compute_scores()
-
-            # s1 = "Items"
-            # s2 = "Satisfaction"
 
             s1 = "ID"
             s2 = "Team"
@@ -575,19 +580,19 @@ class DodgemGame(tk.Tk):
 
             if self.gui:
                 self.canvas.itemconfigure(self.title_comp, text="RESULTS")
-                self.canvas.itemconfigure(self.header_comp, text=s1.ljust(4, " ") + s2.ljust(10, " ") + s5.ljust(12, " ") + s4.ljust(15, " "))
+                self.canvas.itemconfigure(self.header_comp, text=s1.ljust(int(0.4 * self.canvas_scale), " ") + s2.ljust(int(1 * self.canvas_scale), " ") + s5.ljust(int(1.2 * self.canvas_scale), " ") + s4.ljust(int(1.5 * self.canvas_scale), " "))
 
             with open(self.result_log, 'a') as f:
-                f.write(s1.ljust(4, " ") + s2.ljust(10, " ") + s5.ljust(12, " ") + s4.ljust(15, " ") + "\n")
+                f.write(s1.ljust(int(0.4 * self.canvas_scale), " ") + s2.ljust(int(1 * self.canvas_scale), " ") + s5.ljust(int(1.2 * self.canvas_scale), " ") + s4.ljust(int(1.5 * self.canvas_scale), " ") + "\n")
 
             if self.gui:
                 for index, score in enumerate(scores):
-                    self.canvas.itemconfigure(self.score_comp[index], text=str(score[0]).ljust(4, " ") + str(score[1]).ljust(10, " ") + (str(score[2]) + "/" + str(len(self.stalls_to_visit))).ljust(12, " ") + str(round(score[3], 2)).ljust(15, " "))
+                    self.canvas.itemconfigure(self.score_comp[index], text=str(score[0]).ljust(4, " ") + str(score[1]).ljust(10, " ") + (str(score[2]) + "/" + str(len(self.stalls_to_visit))).ljust(int(1 * self.canvas_scale), " ") + str(round(score[3], 2)).ljust(int(1.5 * self.canvas_scale), " "))
                     self.canvas.itemconfigure(self.circles[index], fill=self.player_states[score[0] - 1].color)
             
             for index, score in enumerate(scores):
                 with open(self.result_log, 'a') as f:
-                    f.write(str(score[0]).ljust(4, " ") + str(score[1]).ljust(10, " ") + (str(score[2]) + "/" + str(len(self.stalls_to_visit))).ljust(12, " ") + str(round(score[3], 2)).ljust(15, " ") + "\n")
+                    f.write(str(score[0]).ljust(int(0.4 * self.canvas_scale), " ") + str(score[1]).ljust(int(1 * self.canvas_scale), " ") + (str(score[2]) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(round(score[3], 2)).ljust(int(1.5 * self.canvas_scale), " ") + "\n")
             
             with open(self.result_log, 'a') as f:
                 f.write("Game Over!")
@@ -595,8 +600,9 @@ class DodgemGame(tk.Tk):
         
         self.iteration += 1
         new_positions = []
-        updates = []
+        update_move = []
         update_wait = []
+        interrupt = []
         logs = []
         
         for index, player in enumerate(self.players):
@@ -608,29 +614,57 @@ class DodgemGame(tk.Tk):
             if action == 'lookup':
                 other_players, stalls = self.lookup(self.player_states[index])
                 player.pass_lookup_info(other_players, stalls)
-                new_positions.append([pos_x, pos_y])
-                updates.append(False)
                 end_time = time.time()
+                new_positions.append([pos_x, pos_y])
+                update_move.append(False)
+                interrupt.append(True)
+                if self.player_states[index].wait == 0:
+                    update_wait.append(False)
+                else:
+                    update_wait.append(True)
                 logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + "Action: Lookup")
-
 
             elif action == 'move':
                 new_pos_x, new_pos_y = player.get_next_move()
                 end_time = time.time()
                 if self.player_states[index].wait == 0:
+                    interrupt.append(False)
                     if self.compute_distance(pos_x, pos_y, new_pos_x, new_pos_y) <= 1.0005:
                         new_positions.append([new_pos_x, new_pos_y])
-                        updates.append(True)
+                        update_move.append(True)
                         logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ")")
                     else:
                         new_positions.append([pos_x, pos_y])
-                        updates.append(False)
+                        update_move.append(False)
+                        logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as distance > 1 unit")
+                    update_wait.append(False)
+                else:
+                    interrupt.append(True)
+                    update_wait.append(True)
+                    new_positions.append([pos_x, pos_y])
+                    update_move.append(False)
+                    logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as wait time = " + str(self.player_states[index].wait))
+        
+            elif action == 'lookup move':
+                other_players, stalls = self.lookup(self.player_states[index])
+                player.pass_lookup_info(other_players, stalls)
+                new_pos_x, new_pos_y = player.get_next_move()
+                end_time = time.time()
+                interrupt.append(True)
+                if self.player_states[index].wait == 0:
+                    if self.compute_distance(pos_x, pos_y, new_pos_x, new_pos_y) <= 1.0005:
+                        new_positions.append([new_pos_x, new_pos_y])
+                        update_move.append(True)
+                        logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ")")
+                    else:
+                        new_positions.append([pos_x, pos_y])
+                        update_move.append(False)
                         logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as distance > 1 unit")
                     update_wait.append(False)
                 else:
                     update_wait.append(True)
                     new_positions.append([pos_x, pos_y])
-                    updates.append(False)
+                    update_move.append(False)
                     logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as wait time = " + str(self.player_states[index].wait))
         
         # check collision with other players
@@ -643,12 +677,9 @@ class DodgemGame(tk.Tk):
                                             new_positions[j][0], new_positions[j][1]) or \
                         self.compute_distance(new_positions[i][0], new_positions[i][1], new_positions[j][0], new_positions[j][1]) <= 0.5:
                         
-                        updates[i] = False
+                        update_move[i] = False
+                        interrupt[i] = True
                         self.player_states[i].wait = 10
-                        if self.player_states[i].interaction > 0:
-                            val = math.log2(self.player_states[i].interaction)
-                            self.player_states[i].satisfaction += (self.player_states[i].interaction * val)
-                        self.player_states[i].interaction = 0
                         self.players[i].encounter_obstacle()
                         logs[i] += " Collided with Player id: " + str(other_player.id) + " name: " + str(other_player.name) + ": (" + str(new_positions[i][0]) + ", " + str(new_positions[i][1]) + ")"
 
@@ -658,7 +689,8 @@ class DodgemGame(tk.Tk):
                 collision = False
                 if player_state.wait == 0 and self.check_collision_obstacle(stall.id, stall.x, stall.y, player_state.pos_x, player_state.pos_y, \
                                                                             new_positions[i][0], new_positions[i][1], player_state.color):
-                    updates[i] = False
+                    update_move[i] = False
+                    interrupt[i] = True
                     logs[i] += " Collided with obstacle " + str(stall.id)
                     collision = True
 
@@ -690,9 +722,7 @@ class DodgemGame(tk.Tk):
                 if collision:
                     self.player_states[i].wait = 10
                     self.players[i].encounter_obstacle()
-                    if self.player_states[i].interaction > 0:
-                        self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
-                    self.player_states[i].interaction = 0
+                    interrupt[i] = True
 
         # collect items
         for i, player_state in enumerate(self.player_states):
@@ -702,17 +732,21 @@ class DodgemGame(tk.Tk):
                     self.players[i].collect_item(stall.id)
                     player_state.add_stall_visited(stall.id)
                     player_state.add_items(1)
-                    if self.player_states[i].interaction > 0:
-                        self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
-                    self.player_states[i].interaction = 0
+                    interrupt[i] = True
                     logs[i] += " Collected 1 item from stall " + str(stall.id)
                         
 
         # update positions
-        for i, update in enumerate(updates):
+        for i, update in enumerate(update_move):
             if update:
-                self.player_states[i].increment_interaction()
                 self.player_states[i].pos_x, self.player_states[i].pos_y = new_positions[i][0], new_positions[i][1]
+
+            if interrupt[i]:
+                if self.player_states[i].interaction > 0:
+                    self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
+                self.player_states[i].interaction = 0
+            else:
+                self.player_states[i].increment_interaction()
 
             if update_wait[i]:
                 self.player_states[i].wait -= 1
@@ -725,23 +759,24 @@ class DodgemGame(tk.Tk):
             s3 = "Interaction"
             s4 = "Satisfaction"
             s5 = "Items"
-            f.write(s1.ljust(12, " ") + s2.ljust(10, " ") + s5.ljust(12, " ") + s3.ljust(15, " ") + s4.ljust(15, " ") + "\n")
+            f.write(s1.ljust(int(1.2 * self.canvas_scale), " ") + s2.ljust(int(1 * self.canvas_scale), " ") + s5.ljust(int(1.2 * self.canvas_scale), " ") + s3.ljust(int(1.5 * self.canvas_scale), " ") + s4.ljust(int(1.5 * self.canvas_scale), " ") + "\n")
         
         # update player positions on game board
         if self.gui:
             for index, player_state in enumerate(self.player_states):
-                if updates[index]:
-                    self.canvas.moveto(self.player_comp[index], (player_state.pos_x + 0.5) * constants.canvas_scale, (player_state.pos_y + 0.5) * constants.canvas_scale)
-                self.canvas.itemconfigure(self.score_comp[index], text=str(index + 1).ljust(4, " ") + str(player_state.name).ljust(10, " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(12, " ") + str(player_state.interaction).ljust(15, " ") + str(round(player_state.satisfaction, 2)).ljust(15, " "))
+                if update_move[index]:
+                    self.canvas.moveto(self.player_comp[index], (player_state.pos_x + 0.5) * self.canvas_scale, (player_state.pos_y + 0.5) * self.canvas_scale)
+                self.canvas.itemconfigure(self.score_comp[index], text=str(index + 1).ljust(int(0.4 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " "))
                 
             self.canvas.itemconfigure(self.turn_comp, text="TURN: " + str(self.turn_no) + "/" + str(self.T))
 
-        for index, player_state in enumerate(self.player_states):
+        for player_state in self.player_states:
             with open(player_state.log, 'a') as f:
                 f.write("TURN " + str(self.turn_no) + ": " + logs[index] + "\n")
-    
-        with open(self.score_log, 'a') as f:
-            f.write(str(index + 1).ljust(12, " ") + str(player_state.name).ljust(10, " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(12, " ") + str(player_state.interaction).ljust(15, " ") + str(round(player_state.satisfaction, 2)).ljust(15, " ") + "\n")
+
+        for index, player_state in enumerate(self.player_states):
+            with open(self.score_log, 'a') as f:
+                f.write(str(index + 1).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " ") + "\n")
 
         self.turn_no += 1
         

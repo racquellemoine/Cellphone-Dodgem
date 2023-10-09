@@ -25,6 +25,7 @@ class Player:
 
         self.sign_x = 1
         self.sign_y = 1
+        self.eps = 1e-5
 
         # pathing
         self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
@@ -40,6 +41,7 @@ class Player:
         self.need_update = True
         self.path = deque()
         self.curr_g = set()
+        self.collision = 0
 
     def __init_queue(self):
         stv = self.stalls_to_visit
@@ -82,7 +84,8 @@ class Player:
     def collect_item(self, stall_id):
         if stall_id == self.q[0].id:
             self.q.popleft()
-            self.need_update = True
+            if len(self.q) > 0:
+                self.__update_path()
         else:
             r = []
             for s in self.q:
@@ -103,10 +106,10 @@ class Player:
         o_x, o_y = obstacle[1], obstacle[2]
 
         poly = []
-        poly.append(vg.Point(o_x - 1.51, o_y - 1.51))
-        poly.append(vg.Point(o_x + 1.51, o_y - 1.51))
-        poly.append(vg.Point(o_x + 1.51, o_y + 1.51))
-        poly.append(vg.Point(o_x - 1.51, o_y + 1.51))
+        poly.append(vg.Point(o_x - 2, o_y - 2))
+        poly.append(vg.Point(o_x + 2, o_y - 2))
+        poly.append(vg.Point(o_x + 2, o_y + 2))
+        poly.append(vg.Point(o_x - 2, o_y + 2))
 
         return poly
 
@@ -119,26 +122,29 @@ class Player:
         for o in obstacles:
             if o not in polys:
                 polys[o] = self.__build_poly(o)
-
-            if self.__check_fov(o) and o not in cg:
                 cg.add(o)
                 self.need_update = True
 
     def __update_vg(self):
+        if not self.curr_g:
+            return
         p = list(map(lambda o: self.polys[o], self.curr_g))
         self.graph.build(p, self.workers)
 
     def __update_path(self):
-        path = self.path
+        self.path.clear()
         s = vg.Point(self.pos_x, self.pos_y)
         t = vg.Point(self.q[0].x, self.q[0].y)
-        new_path = self.graph.shortest_path(s, t)
-        path.clear()
+        if not self.curr_g:
+            new_path = [s, t]
+        else:
+            new_path = self.graph.shortest_path(s, t)
         for p in new_path[1:]:
-            path.append(p)
+            self.path.append(p)
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
+        self.collision = 15
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -150,6 +156,9 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
 
+        if len(self.q) == 0:
+            return 'move'
+
         if self.need_update:
             self.__update_vg()
             self.__update_path()
@@ -157,10 +166,12 @@ class Player:
 
         t = self.path[0]
 
-        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < 1:
+        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < self.eps:
             self.path.popleft()
 
         if self.lookup_timer == 0:
+            self.lookup_timer = 10
+
             return 'lookup'
         
         self.lookup_timer -= 1
@@ -170,7 +181,12 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        if len(self.q) > 0:
+        if self.collision > 0:
+            self.collision -= 1
+            if self.collision == 0:
+                self.__update_path()
+
+        elif len(self.q) > 0:
             t = self.path[0]
             vx = t.x - self.pos_x
             vy = t.y - self.pos_y
