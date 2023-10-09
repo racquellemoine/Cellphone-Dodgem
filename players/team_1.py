@@ -36,8 +36,6 @@ class Player:
             self.distance_grid.append(row)
         
         self.queue = deque()
-        self.goal_stall = None
-
         self.set_tsp_path()
         self.set_queue()
         
@@ -51,33 +49,10 @@ class Player:
     # simulator calls this function when the player collects an item from a stall
     
     def set_queue(self):
+        # print("TSP PATH", self.tsp_path)
         for i in self.tsp_path[1:]:
             self.queue.append(self.stalls_to_visit[i-1])
-
-    def set_tsp_path(self):
-        s_to_v = self.stalls_to_visit
-
-        for i in range(len(s_to_v)):
-            distance1 = math.sqrt((self.pos_x- s_to_v[i].x)**2 + (self.pos_y - s_to_v[i].y)**2)
-            self.distance_grid[0][i+1] = math.ceil(distance1)
-            for j in range(len(s_to_v)):
-                distance2 = math.sqrt((s_to_v[i].x-s_to_v[j].x)**2 + (s_to_v[i].y - s_to_v[j].y)**2)
-                self.distance_grid[i+1][j+1] = math.ceil(distance2)
-
-        self.tsp_path = fast_tsp.find_tour(self.distance_grid)
-        print("THIS IS THE PATH", self.tsp_path)
-
-    
-    def collect_item(self, stall_id):
-        for stall in self.stalls_to_visit:
-            if stall.id == stall_id:
-                self.stalls_to_visit.remove(stall)
-
-        self.goal_stall = None
-
-        return stall_id
-        
-    def end_game_tactic(self):
+gi   def end_game_tactic(self):
         self.get_action(0,0)
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -88,7 +63,7 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        print('Encountered obstacle')
+        # print('Encountered obstacle')
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
         self.sign_x *= -1
@@ -348,55 +323,75 @@ class Player:
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
 
-        # Currently if time is less than 10 second 
-        if self.T_theta <= 10 or not self.stalls_to_visit:
-            self.end_game_tactic()
+        # print("QUEUE LEN: ", len(self.queue))
+
+        if self.goal_stall is None and len(self.queue) > 0:
+            self.goal_stall = self.queue.popleft()
+            # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
+
+        if self.goal_stall:
+
+            vx = self.goal_stall.x - self.pos_x
+            vy = self.goal_stall.y - self.pos_y
+            self.sign_x = 1
+            self.sign_y = 1
+            self.vx, self.vy = self._normalize(vx, vy)
+
+            self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+            new_pos_x = self.pos_x + self.sign_x * self.vx
+            new_pos_y = self.pos_y + self.sign_y * self.vy
+
+            # if self.pos_x == new_pos_x:
+            #     print("X is the same")
+            # if self.pos_y == new_pos_y:
+            #     print("Y is the same")
+
+            # print(f'Moving to {new_pos_x}, {new_pos_y}')
+            return new_pos_x, new_pos_y
+
+        elif self.goal_stall is None and len(self.queue) == 0:
+            return self.pos_x, self.pos_y
+
+
+        # # Currently if time is less than 10 second
+        # elif self.T_theta <= 10 or len(self.queue) == 0:
+        #     print("End game tactic")
+        #     self.end_game_tactic()
+
             
-        closest_stall = None
-        min_distance = float('inf')
+        # closest_stall = None
+        # min_distance = float('inf')
+        #
+        # # if empty, stand still
+        # if not self.stalls_to_visit:
+        #     # get_action should be looking down at phone ('move'?)
+        #     return self.pos_x, self.pos_y
+        #
+        # # if we have no current trajectory we're following
+        # if self.goal_stall is None:
+        #     for stall in self.stalls_to_visit:
+        #         # distance given we only need to be 1m away from edge of stall to collect
+        #         dist = math.dist((self.pos_x, self.pos_y), (stall.x + 1, stall.y + 1))
+        #         if dist < min_distance:
+        #             closest_stall = stall
+        #             min_distance = dist
+        #
+        #     # print(f'Goal stall is at {closest_stall.x}, {closest_stall.y} while I am at {self.pos_x}, {self.pos_y}')
+        #
+        #     self.goal_stall = closest_stall
+        #     dist_to_edge = min_distance
+        #     # print(f'Min distance is {min_distance}')
+        # else:
+        #     dist_to_edge = math.dist((self.pos_x, self.pos_y), (self.goal_stall.x + 1, self.goal_stall.y + 1))
+        #
+        # # if we are 1m away from goal stall
+        # if dist_to_edge < 1:
+        #     # self.collect_item(self.goal_stall.id)
+        #     print(f'Collected item from stall {self.goal_stall.id}')
+        #
+        #     # should be done in collect_item
+        #     # self.stalls_to_visit.remove(self.goal_stall)
+        #     # self.goal_stall = None
+        #     return self.pos_x, self.pos_y
 
-        # if empty, stand still
-        if not self.stalls_to_visit:
-            # get_action should be looking down at phone ('move'?)
-            return self.pos_x, self.pos_y
-
-        # if we have no current trajectory we're following
-        if self.goal_stall is None:
-            for stall in self.stalls_to_visit:
-                # distance given we only need to be 1m away from edge of stall to collect
-                dist = math.dist((self.pos_x, self.pos_y), (stall.x + 1, stall.y + 1))
-                if dist < min_distance:
-                    closest_stall = stall
-                    min_distance = dist
-
-            print(f'Goal stall is at {closest_stall.x}, {closest_stall.y} while I am at {self.pos_x}, {self.pos_y}')
-
-            self.goal_stall = closest_stall
-            dist_to_edge = min_distance
-            print(f'Min distance is {min_distance}')
-        else:
-            dist_to_edge = math.dist((self.pos_x, self.pos_y), (self.goal_stall.x + 1, self.goal_stall.y + 1))
-
-        # if we are 1m away from goal stall
-        if dist_to_edge < 1:
-            # self.collect_item(self.goal_stall.id)
-            print(f'Collected item from stall {self.goal_stall.id}')
-
-            # should be done in collect_item
-            # self.stalls_to_visit.remove(self.goal_stall)
-            # self.goal_stall = None
-            return self.pos_x, self.pos_y
-
-        vx = self.goal_stall.x - self.pos_x
-        vy = self.goal_stall.y - self.pos_y
-        self.sign_x = 1
-        self.sign_y = 1
-        self.vx, self.vy = self._normalize(vx, vy)
-
-        self._bounce_off_boundaries(self.pos_x, self.pos_y)
-
-        new_pos_x = self.pos_x + self.sign_x * self.vx
-        new_pos_y = self.pos_y + self.sign_y * self.vy
-
-        print(f'Moving to {new_pos_x}, {new_pos_y}')
-        return new_pos_x, new_pos_y
