@@ -40,7 +40,6 @@ class Player:
         self.workers = len(os.sched_getaffinity(0))
         self.need_update = True
         self.path = deque()
-        self.curr_g = set()
         self.collision = 0
 
     def __init_queue(self):
@@ -117,25 +116,23 @@ class Player:
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
         polys = self.polys
-        cg = self.curr_g
 
         for o in obstacles:
             if o not in polys:
                 polys[o] = self.__build_poly(o)
-                cg.add(o)
                 self.need_update = True
 
     def __update_vg(self):
-        if not self.curr_g:
+        if not self.polys:
             return
-        p = list(map(lambda o: self.polys[o], self.curr_g))
+        p = list(self.polys.values())
         self.graph.build(p, self.workers)
 
     def __update_path(self):
         self.path.clear()
         s = vg.Point(self.pos_x, self.pos_y)
         t = vg.Point(self.q[0].x, self.q[0].y)
-        if not self.curr_g:
+        if not self.polys:
             new_path = [s, t]
         else:
             new_path = self.graph.shortest_path(s, t)
