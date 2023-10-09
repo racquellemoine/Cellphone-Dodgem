@@ -87,9 +87,12 @@ class Player:
             if len(self.q) > 0:
                 self.__update_path()
         else:
+            r = []
             for s in self.q:
                 if stall_id == s.id:
-                    self.q.remove(s)
+                    r.append(s)
+            for s in r:
+                self.q.remove(s)
 
     def __check_fov(self, obstacle):
         bx, by = obstacle[1], obstacle[2]
