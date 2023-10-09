@@ -25,6 +25,7 @@ class Player:
 
         self.sign_x = 1
         self.sign_y = 1
+        self.eps = 1e-5
 
         # pathing
         self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
@@ -40,6 +41,7 @@ class Player:
         self.need_update = True
         self.path = deque()
         self.curr_g = set()
+        self.collision = 0
 
     def __init_queue(self):
         stv = self.stalls_to_visit
@@ -82,7 +84,8 @@ class Player:
     def collect_item(self, stall_id):
         if stall_id == self.q[0].id:
             self.q.popleft()
-            self.need_update = True
+            if len(self.q) > 0:
+                self.__update_path()
         else:
             for s in self.q:
                 if stall_id == s.id:
@@ -118,8 +121,6 @@ class Player:
                 polys[o] = self.__build_poly(o)
                 cg.add(o)
                 self.need_update = True
-        #print(polys)
-        #print(cg)
 
     def __update_vg(self):
         if not self.curr_g:
@@ -137,11 +138,10 @@ class Player:
             new_path = self.graph.shortest_path(s, t)
         for p in new_path[1:]:
             self.path.append(p)
-        #print(self.path)
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.need_update = True
+        self.collision = 15
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -163,7 +163,7 @@ class Player:
 
         t = self.path[0]
 
-        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < 1e-5:
+        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < self.eps:
             self.path.popleft()
 
         if self.lookup_timer == 0:
@@ -178,7 +178,12 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        if len(self.q) > 0:
+        if self.collision > 0:
+            self.collision -= 1
+            if self.collision == 0:
+                self.__update_path()
+
+        elif len(self.q) > 0:
             t = self.path[0]
             vx = t.x - self.pos_x
             vy = t.y - self.pos_y
