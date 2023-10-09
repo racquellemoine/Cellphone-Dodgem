@@ -1,5 +1,6 @@
 import math
 import random
+import numpy
 random.seed(2)
 
 
@@ -40,10 +41,10 @@ class Player:
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        
+
         print("In pass_lookup_info function.")
         # update the information to the self.discovered_region variable
-        
+
         # Imp note - since this is a small version put together in less time, I'll just assume our vision is 10x10 square as opposed to the 10 unit radius for us to see.
         visible_area_x, visible_area_y = range(-10, 11), range(-10, 11)
         for _x in visible_area_x:
@@ -54,11 +55,11 @@ class Player:
 
         for obstacle in obstacles:
             print('obstacle:', obstacle)
-            self.obstacles_loc.add((obstacle[1], obstacle[2]))
-            self.discovered_region[obstacle[1]][obstacle[2]] = 0
-
+            self.obstacles_loc.add((int(obstacle[1]), int(obstacle[2])))
+            self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
     # simulator calls this function when the player encounters an obstacle
+
     def encounter_obstacle(self):
         # assumption is that we have already looked around and added our obstacles to the path
         # if self.pos_x
@@ -88,8 +89,8 @@ class Player:
             # if false, then there is a chance that we ran into a player and we may not need to reroute tsp
             return delta_vx, delta_vy, False
 
-
     # simulator calls this function to get the action 'lookup' or 'move' from the player
+
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
 
@@ -113,7 +114,7 @@ class Player:
 
                 if self.discovered_region[curr_x][curr_y] == -1:
                     print(f"undiscovered location <{curr_x}, {curr_y}> found.")
-                    return True # i.e. we should look up
+                    return True  # i.e. we should look up
 
             # otherwise, don't look up
             return False
