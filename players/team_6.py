@@ -157,7 +157,6 @@ class Player:
     def pass_lookup_info(self, other_players, obstacles):
         self.t_since_lkp = 0
         self.players_cached = [Vector(p[1],p[2]) for p in other_players]
-        self.dir = self.pos.normalized_dir(self.__next_stall())
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
@@ -172,8 +171,9 @@ class Player:
         self.pos = Vector(pos_x, pos_y) # update current position
         if self.pos.dist2(self.prev_pos) < self.vicinity: # if we are not moving
             self.dir = self.__randunit()
-            self.stuck = False
             return 'move'
+        else:
+            self.dir = self.pos.normalized_dir(self.__next_stall())
         return 'lookup' if self.t_since_lkp>=HORIZON/2 or any([self.pos.dist2(p)<=DANGER_ZONE+self.t_since_lkp for p in self.players_cached]) else 'move'
     
     # simulator calls this function to get the next move from the player
