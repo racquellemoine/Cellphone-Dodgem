@@ -86,11 +86,6 @@ class Vector:
         """The vector rotated by theta radians counter-clockwise."""
         return Vector(self.x*math.cos(theta) - self.y*math.sin(theta), self.x*math.sin(theta) + self.y*math.cos(theta))
     
-    @staticmethod
-    def randunit() -> Vector:
-        """A random unit vector."""
-        theta = random.random() * 2 * math.pi
-        return Vector(math.cos(theta), math.sin(theta))
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -117,7 +112,11 @@ class Player:
         self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
         # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
         # self.epsilon = 0.0005 # tolerance for reaching a checkpoint
-        
+    
+    def __randunit():
+        """A random unit vector."""
+        theta = random.random() * 2 * math.pi
+        return Vector(math.cos(theta), math.sin(theta))
     
     def __tsp(self):
         stalls = self.all_stalls
@@ -172,7 +171,7 @@ class Player:
         self.t_since_lkp += 1
         self.pos = Vector(pos_x, pos_y) # update current position
         if self.stuck:
-            self.dir = Vector.randunit()
+            self.dir = self.__randunit()
             self.stuck = False
             return 'move'
         return 'lookup' if self.t_since_lkp>=HORIZON/2 or any([self.pos.dist2(p)<=DANGER_ZONE+self.t_since_lkp for p in self.players_cached]) else 'move'
