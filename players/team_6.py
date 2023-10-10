@@ -116,18 +116,18 @@ class Player:
                 
         self.tsp_path = fast_tsp.find_tour(distances)
         for i in self.tsp_path[1:]:
-            self.stalls_next.append(Vector(self.all_stalls[i-1].x, self.all_stalls[i-1].x))
+            self.stalls_next.append(self.all_stalls[i-1])
 
     # returns (x,y) of next stall we wanna visit
     def __next_stall(self) -> Vector:
         if len(self.stalls_next) == 0:
             return Vector(0,0)
-        return self.stalls_next[0]
+        return Vector(self.stalls_next[0].x, self.stalls_next[0].y)
     
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
         #if you are at the next stall to visit, collect the item and remove the stall from the list
-        if stall_id.x == self.stalls_next[0].x and stall_id.y == self.stalls_next[0].y:
+        if stall_id == self.stalls_next[0].id:
             self.stalls_next.pop(0)
         print('Warning: The current stall is not the scheduled stall to visit.')
 
