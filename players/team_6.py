@@ -81,6 +81,10 @@ class Vector:
     def right_90(self):
         """The vector rotated 90 degrees clockwise."""
         return Vector(self.y, -self.x)
+    
+    def rotate(self, theta):
+        """The vector rotated by theta radians counter-clockwise."""
+        return Vector(self.x*math.cos(theta) - self.y*math.sin(theta), self.x*math.sin(theta) + self.y*math.cos(theta))
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -139,7 +143,8 @@ class Player:
         #if you are at the next stall to visit, collect the item and remove the stall from the list
         if stall_id == self.stalls_next[0].id:
             self.stalls_next.pop(0)
-        print('Warning: The current stall is not the scheduled stall to visit.')
+        else:
+            print('Warning: The current stall is not the scheduled stall to visit.')
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -151,7 +156,7 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        self.dir = Vector(random.random(), random.random()).normalize()
+        self.dir = self.dir.rotate(math.pi/2 + random.random()*math.pi)
         #self.dir.left_90() if random.random()<0.5 else self.dir.right_90()
         print(self.dir.x, self.dir.y)
         print('Warning: Encountered obstacle.')
