@@ -136,11 +136,13 @@ class Player:
     def pass_lookup_info(self, other_players, obstacles):
         self.t_since_lkp = 0
         self.players_cached = [Vector(p[1],p[2]) for p in other_players]
+        self.dir = self.pos.normalized_dir(self.__next_stall())
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
         self.dir = -self.dir # bounce off the obstacle
+        print(self.dir.x, self.dir.y)
         print('Warning: Encountered obstacle.')
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
