@@ -151,10 +151,14 @@ class Player:
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
         #if you are at the next stall to visit, collect the item and remove the stall from the list
-        if stall_id == self.stalls_next[0].id:
-            self.stalls_next.pop(0)
-        else:
-            print('Warning: The current stall is not the scheduled stall to visit.')
+        counter = 0
+        for stall in self.stalls_next:
+            if stall.id == stall_id:
+                self.stalls_next.pop(counter)
+                if counter != 0:
+                    print('Warning: The current stall is not the scheduled stall to visit.')
+                break
+            counter += 1
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -170,6 +174,9 @@ class Player:
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
+        if len(self.stalls_next) == 0:
+            self.dir = Vector(0,0)
+            return 'move'
         if self.t_since_lkp>0:
             self.prev_pos.update_val(self.pos)
         self.t_since_lkp += 1
@@ -179,7 +186,7 @@ class Player:
             return 'move'
         else:
             self.dir = self.pos.normalized_dir(self.__next_stall())
-        return 'lookup' if self.t_since_lkp>=HORIZON/2 or any([self.pos.dist2(p)<=DANGER_ZONE+self.t_since_lkp for p in self.players_cached]) else 'move'
+        return 'lookup' if self.t_since_lkp>=HORIZON/2  else 'move'
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
