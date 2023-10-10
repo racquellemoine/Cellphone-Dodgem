@@ -73,6 +73,14 @@ class Vector:
         """The normalized direction vector from self to other."""
         dist = self.dist2(other)
         return Vector(0,0) if dist==0 else (other - self) / self.dist2(other)
+    
+    def left_90(self):
+        """The vector rotated 90 degrees counter-clockwise."""
+        return Vector(-self.y, self.x)
+    
+    def right_90(self):
+        """The vector rotated 90 degrees clockwise."""
+        return Vector(self.y, -self.x)
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -141,7 +149,7 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        self.dir = -self.dir # bounce off the obstacle
+        self.dir = self.dir.left_90() if random.random()<0.5 else self.dir.right_90()
         print(self.dir.x, self.dir.y)
         print('Warning: Encountered obstacle.')
 
