@@ -92,6 +92,7 @@ class Player:
         self.id = id
         self.name = name
         self.color = color
+        self.prev_pos = Vector(-1, -1)
         self.pos = Vector(initial_pos_x, initial_pos_y)
         self.all_stalls = stalls_to_visit
         self.stalls_next = list()
@@ -101,8 +102,6 @@ class Player:
         self.t_since_lkp = INT_MAX
         self.last_ckpt = Vector(initial_pos_x, initial_pos_y)
 
-        self.stuck = False
-
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
@@ -111,7 +110,7 @@ class Player:
 
         self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
         # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
-        # self.epsilon = 0.0005 # tolerance for reaching a checkpoint
+        self.vicinity = 0.005 # tolerance for reaching a checkpoint
     
     def __randunit(self):
         """A random unit vector."""
@@ -163,14 +162,15 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        self.stuck = True
+        self.prev_pos = self.pos
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
         self.t_since_lkp += 1
+        self.prev_pos = self.pos
         self.pos = Vector(pos_x, pos_y) # update current position
-        if self.stuck:
+        if self.pos.dist2(self.prev_pos) < self.vicinity: # if we are not moving
             self.dir = self.__randunit()
             self.stuck = False
             return 'move'
