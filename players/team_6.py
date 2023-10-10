@@ -1,6 +1,5 @@
-import math
-import random
-import fast_tsp
+import fast_tsp, math, random
+from sys import maxsize as INT_MAX
 
 random.seed(2)
 
@@ -86,13 +85,16 @@ class Player:
 
         self.obstacles_known = list()
         self.players_cached = list()
+        self.t_since_lkp = INT_MAX
+        self.last_ckpt = Vector(initial_pos_x, initial_pos_y)
+
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
 
         self.dir = Vector(1, 0) # unit vector representing direction of movement
-        self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
-        self.epsilon = 0.0005 # tolerance for reaching a checkpoint
+        # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
+        # self.epsilon = 0.0005 # tolerance for reaching a checkpoint
         self.__tsp()
     
     def __tsp(self):
@@ -127,23 +129,26 @@ class Player:
         #if you are at the next stall to visit, collect the item and remove the stall from the list
         if stall_id.x == self.stalls_next[0].x and stall_id.y == self.stalls_next[0].y:
             self.stalls_next.pop(0)
-        pass
+        print('Warning: The current stall is not the scheduled stall to visit.')
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        pass
+        self.t_since_lkp = 0
+        self.players_cached = [Vector(p[1],p[2]) for p in other_players]
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        exit()
+        self.dir = -self.dir # bounce off the obstacle
+        print('Warning: Encountered obstacle.')
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
-        return 'move'
-        pass
+        self.t_since_lkp += 1
+        self.pos = Vector(pos_x, pos_y) # update current position
+        return 'lookup' if self.t_since_lkp>=HORIZON/2 or any([self.pos.dist2(p)<=DANGER_ZONE+self.t_since_lkp for p in self.players_cached]) else 'move'
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
