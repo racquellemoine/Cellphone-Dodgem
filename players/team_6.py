@@ -85,6 +85,12 @@ class Vector:
     def rotate(self, theta):
         """The vector rotated by theta radians counter-clockwise."""
         return Vector(self.x*math.cos(theta) - self.y*math.sin(theta), self.x*math.sin(theta) + self.y*math.cos(theta))
+    
+    @staticmethod
+    def randunit() -> Vector:
+        """A random unit vector."""
+        theta = random.random() * 2 * math.pi
+        return Vector(math.cos(theta), math.sin(theta))
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -99,6 +105,8 @@ class Player:
         self.players_cached = list()
         self.t_since_lkp = INT_MAX
         self.last_ckpt = Vector(initial_pos_x, initial_pos_y)
+
+        self.stuck = False
 
         self.T_theta = T_theta
         self.tsp_path = tsp_path
@@ -156,16 +164,17 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        self.dir = self.dir.rotate(math.pi/2 + random.random()*math.pi)
-        #self.dir.left_90() if random.random()<0.5 else self.dir.right_90()
-        print(self.dir.x, self.dir.y)
-        print('Warning: Encountered obstacle.')
+        self.stuck = True
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
         self.t_since_lkp += 1
         self.pos = Vector(pos_x, pos_y) # update current position
+        if self.stuck:
+            self.dir = Vector.randunit()
+            self.stuck = False
+            return 'move'
         return 'lookup' if self.t_since_lkp>=HORIZON/2 or any([self.pos.dist2(p)<=DANGER_ZONE+self.t_since_lkp for p in self.players_cached]) else 'move'
     
     # simulator calls this function to get the next move from the player
