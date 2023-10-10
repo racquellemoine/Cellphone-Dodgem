@@ -100,10 +100,12 @@ class Player:
         self.tsp_path = tsp_path
         self.num_players = num_players
 
-        self.dir = Vector(1, 0) # unit vector representing direction of movement
+        self.__tsp()
+
+        self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
         # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
         # self.epsilon = 0.0005 # tolerance for reaching a checkpoint
-        self.__tsp()
+        
     
     def __tsp(self):
         stalls = self.all_stalls
