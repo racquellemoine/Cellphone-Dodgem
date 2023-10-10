@@ -149,7 +149,8 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        self.dir = self.dir.left_90() if random.random()<0.5 else self.dir.right_90()
+        self.dir = Vector(random.random(), random.random()).normalize()
+        #self.dir.left_90() if random.random()<0.5 else self.dir.right_90()
         print(self.dir.x, self.dir.y)
         print('Warning: Encountered obstacle.')
 
