@@ -113,7 +113,7 @@ class Player:
         # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
         # self.epsilon = 0.0005 # tolerance for reaching a checkpoint
     
-    def __randunit():
+    def __randunit(self):
         """A random unit vector."""
         theta = random.random() * 2 * math.pi
         return Vector(math.cos(theta), math.sin(theta))
