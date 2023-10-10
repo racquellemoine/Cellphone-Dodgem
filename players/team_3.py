@@ -25,7 +25,7 @@ class Player:
         self.leftLimit = 0 
         self.upperLimit = 100 
         self.lowerLimit = 0
-
+        self.walkingDirection = "right"
         #keep track of current walking direction 
         #we want to walk counter clockwise
         print("starting at: ", self.pos_x, self.pos_y) 
@@ -54,38 +54,47 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.vx = random.random()
-        self.vy = math.sqrt(1 - self.vx**2)
-        self.sign_x *= -1
-        self.sign_y *= -1
-
-        ''' # Calculate a new direction to avoid the obstacle
-        avoidance_angle = random.uniform(0, 2 * math.pi)
-        self.vx = math.cos(avoidance_angle)
-        self.vy = math.sin(avoidance_angle)
-
-        # Move a short distance away from the obstacle
-        voidance_distance = 5  # Adjust the distance as needed
-        self.pos_x += self.vx * avoidance_distance
-        self.pos_y += self.vy * avoidance_distance
-        '''
-    # simulator calls this function to get the action 'lookup' or 'move' from the player
-    def get_action(self, pos_x, pos_y):
-        # return 'lookup' or 'move'
+        #self.vx = random.random()
+        #self.vy = math.sqrt(1 - self.vx**2)
+        #self.sign_x *= -1
+        #self.sign_y *= -1
+        print("obstacle hit")
+        #self.pos_x = 0
+        #self.pos_y = 0
+        #return self.pos_x, self.pos_y
+        if self.walkingDirection == "right":
+            print("switching down")
+            #self.walkingDirection = "back"
+            self.walkingDirection = "down"
+            #self.pos_x = self.pos_x
+            #self.pos_y = self.pos_x -1
+            #print("entering if statement")
+            #self.get_next_move()
+            return self.pos_x, self.pos_y
+        if self.walkingDirection == "down":
+            #self.walkingDirection = "left"
+            self.walkingDirection = "left"
+            return self.pos_x, self.pos_y
+        if self.walkingDirection == "left":
+            #self.walkingDirection = "up"
+            self.walkingDirection = "up"
+            return self.pos_x, self.pos_y
+        if self.walkingDirection == "up":
+            #self.walkingDirection = "right"
+            self.walkingDirection = "right"
+            return self.pos_x, self.pos_y
+        random_number = random.randint(1, 4)
+        if random_number == 1:
+            self.walkingDirection = "down" #ok so this works 
+        if random_number == 2:
+            self.walkingDirection = "up" 
+        if random_number == 3:
+            self.walkingDirection = "right" 
+        if random_number == 4:
+            self.walkingDirection = "left" 
+        #i think because we created var walkingdirection it cannot detect the direction that it is going -> so just sets as default 
+        print("new direction: " + self.walkingDirection)
         
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-        
-        return 'move'
-        # Calculate a new direction to avoid the obstacle
-        avoidance_angle = random.uniform(0, 2 * math.pi)
-        self.vx = math.cos(avoidance_angle)
-        self.vy = math.sin(avoidance_angle)
-
-        # Move a short distance away from the obstacle
-        voidance_distance = 5  # Adjust the distance as needed
-        self.pos_x += self.vx * avoidance_distance
-        self.pos_y += self.vy * avoidance_distance
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
@@ -166,6 +175,7 @@ class Player:
         #continue walking down for 20 steps 
         if self.walkingDirection == "down": 
             print("walking down")
+            print()
             new_pos_x = self.pos_x
             new_pos_y = self.pos_y-1
             return new_pos_x, new_pos_y
@@ -215,5 +225,9 @@ class Player:
             print("no more board left")
             return self.pos_x, self.pos_y
 
+
+        #this is only really occuring if obstacle -> not entirely sure why 
+        #self.pos_x -= 1 
+        #self.pos_y += 1 
         print("returning same position")
         return self.pos_x, self.pos_y
