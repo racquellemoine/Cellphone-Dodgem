@@ -86,6 +86,10 @@ class Vector:
         """The vector rotated by theta radians counter-clockwise."""
         return Vector(self.x*math.cos(theta) - self.y*math.sin(theta), self.x*math.sin(theta) + self.y*math.cos(theta))
     
+    def update_val(self, new_val):
+        """Update the value of the vector."""
+        self.x = new_val.x
+        self.y = new_val.y
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -110,7 +114,7 @@ class Player:
 
         self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
         # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
-        self.vicinity = 0.005 # tolerance for reaching a checkpoint
+        self.vicinity = 0.0005 # tolerance for reaching a checkpoint
     
     def __randunit(self):
         """A random unit vector."""
@@ -161,13 +165,14 @@ class Player:
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
-        self.prev_pos = self.pos
+        self.prev_pos.update_val(self.pos)
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
+        if self.t_since_lkp>0:
+            self.prev_pos.update_val(self.pos)
         self.t_since_lkp += 1
-        self.prev_pos = self.pos
         self.pos = Vector(pos_x, pos_y) # update current position
         if self.pos.dist2(self.prev_pos) < self.vicinity: # if we are not moving
             self.dir = self.__randunit()
