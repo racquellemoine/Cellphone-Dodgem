@@ -49,35 +49,64 @@ class Player:
     def populate_path(self):
         # populate the self.path_to_follow public variable
 
-        stall_coordinates = [(stall.x, stall.y)
+        stall_coordinates = [(stall.x, stall.y, stall.id)
                              for stall in self.stalls_to_visit]
         print(stall_coordinates)
-        distance_matrix = self.compute_distance_matrix(stall_coordinates)
+        i = 0
+        for x in stall_coordinates:
+            print(i, x)
+            i += 1
+
+        def compute_distance_matrix(coordinates):
+            n = len(coordinates)
+            matrix = [[0] * n for _ in range(n)]
+            for i in range(n):
+                for j in range(n):
+                    x1, y1, _ = coordinates[i]
+                    x2, y2, _ = coordinates[j]
+                    distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+                    matrix[i][j] = int(round(distance))
+            return matrix
+
+        distance_matrix = compute_distance_matrix(stall_coordinates)
         print("Before finding tour")
+
         optimal_order = fast_tsp.find_tour(distance_matrix)
         print("After finding tour")
-        print("optimal order", optimal_order)
+
+        print("output of fast_tsp", optimal_order)
         self.path_to_follow = []
 
         for index in optimal_order:
             stall = self.stalls_to_visit[index]
             pos_x = stall.x
             pos_y = stall.y
-            waypoint = (pos_x, pos_y, "stall")
+            id = stall.id
+            waypoint = (pos_x, pos_y, id, "stall")
             self.path_to_follow.append(waypoint)
-        print("tsp path", self.path_to_follow)
-        pass
 
-    def compute_distance_matrix(self, coordinates):
-        n = len(coordinates)
-        matrix = [[0] * n for _ in range(n)]
-        for i in range(n):
-            for j in range(n):
-                x1, y1 = coordinates[i]
-                x2, y2 = coordinates[j]
-                distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-                matrix[i][j] = int(round(distance))
-        return matrix
+        # Calculate the distances from the current position to each stall
+        closest_stall, mindist = None, 100000
+        for stall in self.path_to_follow:
+            x = stall[0]
+            y = stall[1]
+            dist = ((self.pos_x - x) ** 2 + (self.pos_y - y) ** 2) ** 0.5
+
+            if dist < mindist:
+                closest_stall, mindist = stall, dist
+
+        if closest_stall:
+
+            # Find the index of the closest stall
+            closest_stall_index = self.path_to_follow.index(closest_stall)
+
+            # Reorder the stall_coordinates to start with the closest stall
+            self.path_to_follow = self.path_to_follow[closest_stall_index:] + \
+                self.path_to_follow[:closest_stall_index]
+
+        print()
+        print("final path", self.path_to_follow)
+        pass
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -98,7 +127,7 @@ class Player:
         for obstacle in obstacles:
             print('obstacle:', obstacle)
             self.obstacles_loc.add((obstacle[1], obstacle[2]))
-            self.discovered_region[obstacle[1]][obstacle[2]] = 0
+            self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
     # simulator calls this function when the player encounters an obstacle
 
