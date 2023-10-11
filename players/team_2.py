@@ -29,12 +29,18 @@ class Player:
         self.turn_counter = 0
 
         # -1 if not discovered
-        # 0 if obstacle
-        # 1 if discovered
+        #  0 if obstacle
+        #  1 if discovered
+        #  2 if unvisited stalls
+        #  3 if visited stalls
         self.discovered_region = [[-1]*101] * 101
 
-    # simulator calls this function when the player collects an item from a stall
-    def collect_item(self, stall_id):
+        # A point in path is a 3 variable tuple that looks like (pos_x, pos_y, "stall/point")
+        self.path_to_follow = [(None, None, None)] * len(self.stalls_to_visit) # cross-check this once
+        populate_path()
+
+    def populate_path():
+        # populate the self.path_to_follow public variable
         pass
 
     # simulator calls this function when it passes the lookup information
