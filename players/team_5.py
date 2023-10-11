@@ -124,6 +124,7 @@ class Player:
         for o in obstacles:
             if o not in polys:
                 polys[o] = self.__build_poly(o)
+                print(o)
                 self.need_update = True
 
     def __merge_nearby_polys(self, centers):
@@ -188,7 +189,7 @@ class Player:
             self.path.popleft()
 
         if self.lookup_timer == 0:
-            self.lookup_timer = 45
+            self.lookup_timer = 9
 
             return 'lookup'
         
