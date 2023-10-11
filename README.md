@@ -1,7 +1,7 @@
 # Project 2: Cellphone Dodgem
 
 ## Citation and License
-This project belongs to Department of Computer Science, Columbia University. It may be used for educational purposes under Creative Commons **with proper attribution and citation** for the author TA **Smrithi Prakash, and the Instructor, Prof. Kenneth Ross**.
+This project belongs to the Department of Computer Science, Columbia University. It may be used for educational purposes under Creative Commons **with proper attribution and citation** for the author TA **Smrithi Prakash, and the Instructor, Prof. Kenneth Ross**.
 
 ## Summary
 
@@ -35,7 +35,7 @@ pip install -r requirements.txt
 ### Simulator
 
 ```bash
-python main.py [-ns/--no_of_stalls] [-nv/--no_to_visit] [-theta/--theta] [-T/--total_time] [-p/--players] [-s/--seed] [-g/--gui] [-sc/--scale]
+python main.py [-ns/--no_of_stalls] [-nv/--no_to_visit] [-theta/--theta] [-T/--total_time] [-p/--players] [-s/--seed] [-g/--gui] [-sc/--scale] [-i/--interval]
 ```
 
 ### Running without Simulator
@@ -44,4 +44,4 @@ python main.py [-ns/--no_of_stalls] [-nv/--no_to_visit] [-theta/--theta] [-T/--t
 python main.py -g False
 ```
 
-You can change the random seed, number of stalls, number of stalls to visit, theta value, timeout, list of players, and seed.
+You can change the random seed, number of stalls, number of stalls to visit, theta value, timeout, list of players, and the time interval for the game loop.
