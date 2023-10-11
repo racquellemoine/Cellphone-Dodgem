@@ -204,7 +204,7 @@ class Player:
     def get_next_move(self):
         if self.collision > 0:
             self.collision -= 1
-            if self.collision == 0:
+            if self.collision == 0 and len(self.q) > 0:
                 self.__update_path()
 
         elif len(self.q) > 0:
