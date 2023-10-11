@@ -22,13 +22,12 @@ class Player:
 
         self.sign_x = 1
         self.sign_y = 1
-
-        self.obstacles_loc = set()
-        self.return_to_og = 0
+        self.obstacles_loc = []
         self.original_pos_x = initial_pos_x
         self.original_pos_y = initial_pos_y
 
         self.turn_counter = 0
+        self.collision_turn = -100
 
         # -1 if not discovered
         #  0 if obstacle
@@ -36,26 +35,28 @@ class Player:
         #  2 if unvisited stalls
         #  3 if visited stalls
         self.discovered_region = [[-1]*101] * 101
+        self.just_collided = 0
 
         # A point in path is a 3 variable tuple that looks like (pos_x, pos_y, "stall/point")
-        self.path_to_follow = [(None, None, None)] * \
-            len(self.stalls_to_visit)  # cross-check this once
+        self.path_to_follow = []
         self.populate_path()
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-        pass
+        print("eye dee", stall_id)
+        print(self.path_to_follow)
+
+        for i in range(len(self.path_to_follow)):
+            posx, posy, eyedee, _ = self.path_to_follow[i]
+            if stall_id == eyedee:
+                self.path_to_follow.pop(i)
+                break
 
     def populate_path(self):
         # populate the self.path_to_follow public variable
 
         stall_coordinates = [(stall.x, stall.y, stall.id)
                              for stall in self.stalls_to_visit]
-        print(stall_coordinates)
-        i = 0
-        for x in stall_coordinates:
-            print(i, x)
-            i += 1
 
         def compute_distance_matrix(coordinates):
             n = len(coordinates)
@@ -69,13 +70,8 @@ class Player:
             return matrix
 
         distance_matrix = compute_distance_matrix(stall_coordinates)
-        print("Before finding tour")
 
         optimal_order = fast_tsp.find_tour(distance_matrix)
-        print("After finding tour")
-
-        print("output of fast_tsp", optimal_order)
-        self.path_to_follow = []
 
         for index in optimal_order:
             stall = self.stalls_to_visit[index]
@@ -96,17 +92,14 @@ class Player:
                 closest_stall, mindist = stall, dist
 
         if closest_stall:
-
             # Find the index of the closest stall
             closest_stall_index = self.path_to_follow.index(closest_stall)
-
             # Reorder the stall_coordinates to start with the closest stall
             self.path_to_follow = self.path_to_follow[closest_stall_index:] + \
                 self.path_to_follow[:closest_stall_index]
 
-        print()
-        print("final path", self.path_to_follow)
-        pass
+        # print()
+        # print("final path", self.path_to_follow)
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -122,11 +115,11 @@ class Player:
             for _y in visible_area_y:
                 curr_x = min(max(0, self.pos_x + _x), 100)
                 curr_y = min(max(0, self.pos_y + _y), 100)
-                self.discovered_region[curr_x][curr_y] = 1
+                self.discovered_region[int(curr_x)][int(curr_y)] = 1
 
         for obstacle in obstacles:
             print('obstacle:', obstacle)
-            self.obstacles_loc.add((obstacle[1], obstacle[2]))
+            self.obstacles_loc.append((obstacle[1], obstacle[2]))
             self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
     # simulator calls this function when the player encounters an obstacle
@@ -134,6 +127,10 @@ class Player:
     def encounter_obstacle(self):
         # assumption is that we have already looked around and added our obstacles to the path
         # if self.pos_x
+
+        self.obstacles_loc.append((self.pos_x, self.pos_y))
+        self.just_collided += 1
+        self.collision_turn = self.turn_counter
 
         def generate_deltas():
             delta_x = random.choice([-1, 1])
@@ -170,6 +167,7 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
         print(f"In get_action function, <pos_x, pos_y>: <{pos_x}, {pos_y}>")
+        print(self.turn_counter)
 
         # a function that checkes if the current position is near an undiscovered region.
         def should_lookup():
@@ -183,7 +181,7 @@ class Player:
                 curr_x = max(min(pos_x + x_move, 99), 0)
                 curr_y = max(min(pos_y + y_move, 99), 0)
 
-                if self.discovered_region[curr_x][curr_y] == -1:
+                if self.discovered_region[int(curr_x)][int(curr_y)] == -1:
                     print(f"undiscovered location <{curr_x}, {curr_y}> found.")
                     return True  # i.e. we should look up
 
@@ -192,7 +190,7 @@ class Player:
 
         # check if the current position
         # a) is not discovered yet
-        if self.discovered_region[pos_x][pos_y] == -1:
+        if self.discovered_region[int(pos_x)][int(pos_y)] == -1:
             print(self.turn_counter, 'Lookup')
             return 'lookup'
 
@@ -201,35 +199,82 @@ class Player:
             print(self.turn_counter, 'Lookup')
             return 'lookup'
         # otherwise move
+        if len(self.path_to_follow) == 0:
+            print(self.turn_counter, 'move (finished)')
+            return 'move'
+
         print(self.turn_counter, 'move')
         return 'move'
 
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        new_pos_x, new_pos_y = 0, 0
+        if not self.path_to_follow or len(self.path_to_follow) == 0:
+            return self.pos_x, self.pos_y  # No stalls to visit
 
-        print('In the get_next_move func - ')
-        print(self.tsp_path)
+        if self.turn_counter - self.collision_turn <= 11:
+            # Generate random velocity components
+            random_angle = random.uniform(0, 2 * math.pi)
+            self.vx = math.cos(random_angle)
+            self.vy = math.sin(random_angle)
 
-        def gen_new():
-            pos_x, pos_y = 0, 0
-            val = random.random()
-            if val <= 0.25:
-                pos_x, pos_y = self.pos_x + 1, self.pos_y
-            elif val < 0.5:
-                pos_x, pos_y = self.pos_x, self.pos_y + 1
-            elif val < 0.7:
-                pos_x, pos_y = self.pos_x - 1, self.pos_y
-            elif val <= 0.1:
-                pos_x, pos_y = self.pos_x, self.pos_y - 1
-            return pos_x, pos_y
+            # Calculate the new position
+            new_pos_x = self.pos_x + self.vx
+            new_pos_y = self.pos_y + self.vy
 
-        new_pos_x, new_pos_y = gen_new()
+            # Ensure that the velocity is within bounds
+            max_speed = 1.0  # Maximum speed is 1 m/s
+            norm = math.sqrt(self.vx**2 + self.vy**2)
+            if norm > max_speed:
+                self.vx = max_speed * self.vx / norm
+                self.vy = max_speed * self.vy / norm
 
-        if ((new_pos_x, new_pos_y) in self.obstacles_loc):  # when using while, it got stuck
-            new_pos_x, new_pos_y = gen_new()
-        while new_pos_x < 0 or new_pos_x > 100 or new_pos_y < 0 or new_pos_y > 100:
-            new_pos_x, new_pos_y = gen_new()
+            # Check if the new position is within bounds (0-100)
+            new_pos_x = max(min(new_pos_x, 100), 0)
+            new_pos_y = max(min(new_pos_y, 100), 0)
 
-        return new_pos_x, new_pos_y
+            return new_pos_x, new_pos_y
+
+        else:
+            next_stall = self.path_to_follow[0]
+            target_x, target_y = next_stall[0], next_stall[1]
+
+            dx = target_x - self.pos_x
+            dy = target_y - self.pos_y
+            distance_to_target = math.sqrt(dx**2 + dy**2)
+
+            # Check for nearby obstacles and other players
+            for obstacle_x, obstacle_y in self.obstacles_loc:
+                obstacle_distance = math.sqrt(
+                    (obstacle_x - self.pos_x)**2 + (obstacle_y - self.pos_y)**2)
+                if obstacle_distance < 0.5:
+                    # If too close to an obstacle, adjust direction to avoid it
+                    dx += (self.pos_x - obstacle_x)
+                    dy += (self.pos_y - obstacle_y)
+
+            if distance_to_target < 0.5:
+                # Calculate new velocity components
+                # If already close to the target stall, stop and remove it from the list
+                self.path_to_follow.pop(0)
+                self.vx, self.vy = 0, 0
+            else:
+                # Calculate the new direction
+                norm = math.sqrt(dx**2 + dy**2)
+                self.vx = dx / norm
+                self.vy = dy / norm
+
+            # Ensure that the velocity is within bounds
+            max_speed = 1.0  # Maximum speed is 1 m/s
+            if math.sqrt(self.vx**2 + self.vy**2) > max_speed:
+                self.vx = max_speed * self.vx / norm
+                self.vy = max_speed * self.vy / norm
+
+            # Calculate the new position
+            new_pos_x = self.pos_x + self.vx
+            new_pos_y = self.pos_y + self.vy
+
+            # Check if the new position is within bounds (0-100)
+            new_pos_x = max(min(new_pos_x, 100), 0)
+            new_pos_y = max(min(new_pos_y, 100), 0)
+
+            return new_pos_x, new_pos_y
