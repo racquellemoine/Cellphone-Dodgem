@@ -3,8 +3,11 @@ import random
 import fast_tsp
 import pyvisgraph as vg
 import os
+import numpy as np
 from collections import deque, defaultdict
 from itertools import chain
+from sklearn.cluster import AgglomerativeClustering
+from scipy.spatial import ConvexHull
 random.seed(2)
 
 class Player:
@@ -40,7 +43,6 @@ class Player:
         self.workers = len(os.sched_getaffinity(0))
         self.need_update = True
         self.path = deque()
-        self.curr_g = set()
         self.collision = 0
 
     def __init_queue(self):
@@ -86,10 +88,14 @@ class Player:
             self.q.popleft()
             if len(self.q) > 0:
                 self.__update_path()
+                self.lookup_timer = 0
         else:
+            r = None 
             for s in self.q:
                 if stall_id == s.id:
-                    self.q.remove(s)
+                    r = s
+                    break
+            self.q.remove(r)
 
     def __check_fov(self, obstacle):
         bx, by = obstacle[1], obstacle[2]
@@ -114,34 +120,52 @@ class Player:
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
         polys = self.polys
-        cg = self.curr_g
 
         for o in obstacles:
             if o not in polys:
                 polys[o] = self.__build_poly(o)
-                cg.add(o)
                 self.need_update = True
 
+    def __merge_nearby_polys(self, centers):
+        ac = AgglomerativeClustering(n_clusters=None, linkage='single', metric='euclidean', distance_threshold=math.sqrt(32))
+        clusters = ac.fit(centers).labels_
+        
+        hulls = []
+        for i in range(1, clusters.max() + 1):
+            cluster_centers = centers[clusters == i]
+            cluster_vertices = np.empty((len(cluster_centers) * 4, 2))
+            for i, center in enumerate(cluster_centers):
+                for j, d in enumerate(np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]]) * 2):
+                    cluster_vertices[i * 4 + j] = center + d
+            hulls.append(cluster_vertices[ConvexHull(cluster_vertices).vertices])
+        
+        return [[vg.Point(point[0], point[1]) for point in hull] for hull in hulls]
+
     def __update_vg(self):
-        if not self.curr_g:
+        if not self.polys:
             return
-        p = list(map(lambda o: self.polys[o], self.curr_g))
+        # p = list(self.polys.values())
+        p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
         self.graph.build(p, self.workers)
 
     def __update_path(self):
         self.path.clear()
         s = vg.Point(self.pos_x, self.pos_y)
         t = vg.Point(self.q[0].x, self.q[0].y)
-        if not self.curr_g:
+        if not self.polys:
             new_path = [s, t]
         else:
-            new_path = self.graph.shortest_path(s, t)
+            try:
+                new_path = self.graph.shortest_path(s, t)
+            except:
+                new_path = [s, t]
         for p in new_path[1:]:
             self.path.append(p)
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         self.collision = 15
+        self.lookup_timer = 0
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
         self.sign_x *= -1
@@ -167,7 +191,7 @@ class Player:
             self.path.popleft()
 
         if self.lookup_timer == 0:
-            self.lookup_timer = 10
+            self.lookup_timer = 9
 
             return 'lookup'
         
