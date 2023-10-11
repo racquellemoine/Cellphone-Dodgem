@@ -110,6 +110,8 @@ class Player:
         self.tsp_path = tsp_path
         self.num_players = num_players
 
+        self.pos_last_lkp = Vector(initial_pos_x, initial_pos_y)
+
         self.__tsp()
 
         self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
@@ -166,9 +168,25 @@ class Player:
         self.t_since_lkp = 0
         self.players_cached = [Vector(p[1],p[2]) for p in other_players]
 
+        # update obstacles
+        self.obstacles_known = [Vector(o[1],o[2]) for o in obstacles]
+
+    def avoid_players(self):
+        for player in self.players_cached:
+            if self.pos.dist2(player) < DANGER_ZONE:
+                self.dir = self.pos.normalized_dir(player).left_90()
+                break
+
+    def avoid_obstacles(self):
+        for obstacle in self.obstacles_known:
+            if self.pos.dist2(obstacle) < DANGER_ZONE+3:
+                self.dir = self.pos.normalized_dir(obstacle).left_90()
+                break
+
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
+        # print("Warning: Encountered an obstacle.")
         self.prev_pos.update_val(self.pos)
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
@@ -183,10 +201,22 @@ class Player:
         self.pos = Vector(pos_x, pos_y) # update current position
         if self.pos.dist2(self.prev_pos) < self.vicinity: # if we are not moving
             self.dir = self.__randunit()
+            # if self.players_cached:
+            #     self.avoid_players()
             return 'move'
         else:
             self.dir = self.pos.normalized_dir(self.__next_stall())
-        return 'lookup' if self.t_since_lkp>=HORIZON/2  else 'move'
+            self.avoid_obstacles()
+            # if self.players_cached:
+            #     self.avoid_players()
+
+        # if self.t_since_lkp>=HORIZON/2:
+        if self.pos_last_lkp.dist2(self.pos) > 5:
+            self.pos_last_lkp.update_val(self.pos)
+            # print("Looking up")
+            return 'lookup'
+        
+        return 'move'
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
