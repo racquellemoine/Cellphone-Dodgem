@@ -1,5 +1,7 @@
 import math
 import random
+import fast_tsp
+import numpy
 random.seed(2)
 
 
@@ -37,11 +39,40 @@ class Player:
 
         # A point in path is a 3 variable tuple that looks like (pos_x, pos_y, "stall/point")
         self.path_to_follow = [(None, None, None)] * len(self.stalls_to_visit) # cross-check this once
-        populate_path()
+        self.populate_path()
 
-    def populate_path():
+    def populate_path(self):
         # populate the self.path_to_follow public variable
+        
+        stall_coordinates = [(stall.x, stall.y) for stall in self.stalls_to_visit]
+        print(stall_coordinates)
+        distance_matrix = self.compute_distance_matrix(stall_coordinates)
+        print("Before finding tour")
+        optimal_order = fast_tsp.find_tour(distance_matrix)
+        print("After finding tour")
+        print("optimal order", optimal_order)
+        self.path_to_follow = []
+
+        for index in optimal_order:
+            stall = self.stalls_to_visit[index]
+            pos_x = stall.x
+            pos_y = stall.y
+            waypoint = (pos_x, pos_y, "stall")
+            self.path_to_follow.append(waypoint)
+        print("tsp path", self.path_to_follow)
         pass
+        
+    def compute_distance_matrix(self, coordinates):
+        n = len(coordinates)
+        matrix = [[0] * n for _ in range(n)]
+        for i in range(n):
+            for j in range(n):
+                x1, y1 = coordinates[i]
+                x2, y2 = coordinates[j]
+                distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+                matrix[i][j] = int(round(distance))
+        return matrix
+    
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
