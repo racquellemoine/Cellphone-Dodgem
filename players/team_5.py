@@ -3,8 +3,11 @@ import random
 import fast_tsp
 import pyvisgraph as vg
 import os
+import numpy as np
 from collections import deque, defaultdict
 from itertools import chain
+from sklearn.cluster import AgglomerativeClustering
+from scipy.spatial import ConvexHull
 random.seed(2)
 
 class Player:
@@ -123,10 +126,26 @@ class Player:
                 polys[o] = self.__build_poly(o)
                 self.need_update = True
 
+    def __merge_nearby_polys(self, centers):
+        ac = AgglomerativeClustering(n_clusters=None, linkage='single', metric='euclidean', distance_threshold=math.sqrt(32))
+        clusters = ac.fit(centers).labels_
+        
+        hulls = []
+        for i in range(1, clusters.max() + 1):
+            cluster_centers = centers[clusters == i]
+            cluster_vertices = np.empty((len(cluster_centers) * 4, 2))
+            for i, center in enumerate(cluster_centers):
+                for j, d in enumerate(np.array([[2, 2], [2, -2], [-2, 2], [-2, -2]])):
+                    cluster_vertices[i * 4 + j] = center + d
+            hulls.append(cluster_vertices[ConvexHull(cluster_vertices).vertices])
+        
+        return [[vg.Point(point[0], point[1]) for point in hull] for hull in hulls]
+
     def __update_vg(self):
         if not self.polys:
             return
         p = list(self.polys.values())
+        # p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
         self.graph.build(p, self.workers)
 
     def __update_path(self):
