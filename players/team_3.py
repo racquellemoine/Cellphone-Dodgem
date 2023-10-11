@@ -46,6 +46,8 @@ class Player:
     def collect_item(self, stall_id):
         #remove stall_id from stalls_to_visit 
         if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
+        #remove stall_id from stalls_to_visit 
+        if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -54,10 +56,47 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.vx = random.random()
-        self.vy = math.sqrt(1 - self.vx**2)
-        self.sign_x *= -1
-        self.sign_y *= -1
+        #self.vx = random.random()
+        #self.vy = math.sqrt(1 - self.vx**2)
+        #self.sign_x *= -1
+        #self.sign_y *= -1
+        print("obstacle hit")
+        #self.pos_x = 0
+        #self.pos_y = 0
+        #return self.pos_x, self.pos_y
+        if self.walkingDirection == "right":
+            print("switching down")
+            #self.walkingDirection = "back"
+            self.walkingDirection = "down"
+            #self.pos_x = self.pos_x
+            #self.pos_y = self.pos_x -1
+            #print("entering if statement")
+            #self.get_next_move()
+            return self.pos_x, self.pos_y
+        if self.walkingDirection == "down":
+            #self.walkingDirection = "left"
+            self.walkingDirection = "left"
+            return self.pos_x, self.pos_y
+        if self.walkingDirection == "left":
+            #self.walkingDirection = "up"
+            self.walkingDirection = "up"
+            return self.pos_x, self.pos_y
+        if self.walkingDirection == "up":
+            #self.walkingDirection = "right"
+            self.walkingDirection = "right"
+            return self.pos_x, self.pos_y
+        random_number = random.randint(1, 4)
+        if random_number == 1:
+            self.walkingDirection = "down" #ok so this works 
+        if random_number == 2:
+            self.walkingDirection = "up" 
+        if random_number == 3:
+            self.walkingDirection = "right" 
+        if random_number == 4:
+            self.walkingDirection = "left" 
+        #i think because we created var walkingdirection it cannot detect the direction that it is going -> so just sets as default 
+        print("new direction: " + self.walkingDirection)
+        
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
