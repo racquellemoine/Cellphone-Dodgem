@@ -23,24 +23,32 @@ class Player:
         #wall boundaries for wall following algorithm 
         self.rightLimit = 100 
         self.leftLimit = 0 
-        self.upperLimit = 100 
-        self.lowerLimit = 0
+        self.upperLimit = 0 
+        self.lowerLimit = 100
         self.walkingDirection = "right"
+
+        #queue of next steps to move around obstacle or away from wall
+        self.queue = []
         #keep track of current walking direction 
         #we want to walk counter clockwise
         print("starting at: ", self.pos_x, self.pos_y) 
         if self.pos_x == self.rightLimit: 
+            self.queue = ["left"]*10
             print("starting walking up")
             self.walkingDirection = "up"
         if self.pos_y == self.upperLimit: 
+            self.queue = ["down"]*10
             print("starting walking left")
             self.walkingDirection = "left"
         if self.pos_x == self.leftLimit:
+            self.queue = ["right"]*10
             print("starting walking down")
             self.walkingDirection = "down"
         if self.pos_y == self.lowerLimit: 
+            self.queue = ["up"]*10
             print("starting walking right")
             self.walkingDirection = "right"
+        print("queue: ", self.queue)
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
@@ -114,111 +122,23 @@ class Player:
         print("lowerLimit: ", self.lowerLimit)
         print("leftLimit: ", self.leftLimit)
         print("rightLimit: ", self.rightLimit)
-        print("currently at: ", self.pos_x, ", ", self.pos_y)
-        #within 10 steps of right boundary while walking right 
-        if self.walkingDirection == "right" and self.pos_x in range(self.rightLimit-10, self.rightLimit): 
-            print("walking right, approached limit")
-            self.rightLimit = self.rightLimit-10 
-            self.walkingDirection = "back track left"
-            new_pos_x = self.pos_x-1
-            new_pos_y = self.pos_y
-            return new_pos_x, new_pos_y
-        #walking right but haven't approached rightLimit yet, continue 
-        if self.walkingDirection == "right": 
-            print("walking right")
-            new_pos_x = self.pos_x + 1
-            new_pos_y = self.pos_y
-            return new_pos_x, new_pos_y
-        
-        #within 10 steps of upper boundary while walking up 
-        if self.walkingDirection == "up" and self.pos_y in range(self.upperLimit-10, self.upperLimit): 
-            #move boundary 10 steps down from current upper boundary 
-            print("walking up and approached limit")
-            self.upperLimit = self.upperLimit-10
-            self.walkingDirection = "back track down"
-            new_pos_x = self.pos_x
-            new_pos_y = self.pos_y-1
-            return new_pos_x, new_pos_y
-        #walking up but haven't approached upperLimit yet
-        #continue walking up for 20 steps 
-        if self.walkingDirection == "up": 
-            print("walking up, haven't approached limit")
-            new_pos_x = self.pos_x
-            new_pos_y = self.pos_y + 1
-            return new_pos_x, new_pos_y
-        
-        #within 10 steps of left boundary while walking left 
-        if self.walkingDirection == "left" and self.pos_x in range(self.leftLimit, self.leftLimit+10): 
-            print("walking left and approached limit")
-            #move boundary 10 steps right from current leftLimit and walk down 
-            self.leftLimit = self.leftLimit - 10
-            self.walkingDirection = "back track right"
-            new_pos_x = self.leftLimit - 1
-            new_pos_y = self.pos_y
-        #walking left but haven't approached leftLimit yet, continue
-        if self.walkingDirection == "left":
-            new_pos_x = self.pos_x - 1 
-            print("walking left")
-            new_pos_y = self.pos_y
-            return new_pos_x, new_pos_y
-        
-        #within 10 steps of lower boundary while walking down 
-        if self.walkingDirection == "down" and self.pos_y in range(self.lowerLimit, self.lowerLimit+11): 
-            print("walking down and approached lowerLimit")
-            #move boundary 10 steps up from current lowerLimit and walk right 
-            self.lowerLimit = self.lowerLimit + 10 
-            new_pos_x = self.pos_x
-            new_pos_y = self.pos_y + 1
-            self.walkingDirection = "back track up"
-            return new_pos_x, new_pos_y
-        #walking down but haven't approached lowerLimit yet 
-        #continue walking down for 20 steps 
-        if self.walkingDirection == "down": 
-            print("walking down")
-            print()
-            new_pos_x = self.pos_x
-            new_pos_y = self.pos_y-1
-            return new_pos_x, new_pos_y
-        
-        #we reached right limit and are backtracking left 
-        if self.walkingDirection == "back track left": 
-            print("back tracking left")
-            new_pos_x = self.pos_x - 1
-            new_pos_y = self.pos_y
-            if new_pos_x == self.rightLimit - 10: 
-                #once we are 10 steps left from the right limit, walk up
-                self.walkingDirection = "up"
-            return new_pos_x, new_pos_y
-        
-        #we reached upper limit and are backtracking down 
-        if self.walkingDirection == "back track down": 
-            print("back tracking down")
-            new_pos_x = self.pos_x 
-            new_pos_y = self.pos_y - 1
-            if new_pos_y == self.upperLimit - 10: 
-                #once we are 10 steps below upper limit, walk left 
-                self.walkingDirection = "left"
-            return new_pos_x, new_pos_y
-        
-        #we hit left bound and are backtracking right
-        if self.walkingDirection == "back track right": 
-            print("back tracking right")
-            new_pos_x = self.pos_x + 1
-            new_pos_y = self.pos_y
-            if new_pos_y == self.leftLimit + 10: 
-                #once we are 10 steps right of left limit, walk down 
-                self.walkingDirection = "down"
-            return new_pos_x, new_pos_y
+        print("currently at: ", self.pos_x, ", ", self.pos_y)  
+        print("queue: ", self.queue)
+        print("number of stalls: ", len(self.stalls_to_visit))
 
-        #we hit lower limit and are backtracking up 
-        if self.walkingDirection == "back track up": 
-            print("back tracking up")
-            new_pos_x = self.pos_x
-            new_pos_y = self.pos_y + 1
-            if new_pos_y == self.lowerLimit + 10: 
-                #once we are 10 steps up from lower limit, walk right
-                self.walkingDirection = "right"
-            return new_pos_x, new_pos_y
+
+        nextMove = self.walkingDirection
+        if self.queue != []: nextMove = self.queue.pop(0)
+        
+        if nextMove == "up": return self.__walkingUp()
+        if nextMove == "down": return self.__walkingDown()
+        if nextMove == "right": return self.__walkingRight()
+        if nextMove == "left": return self.__walkingLeft()
+
+        if self.walkingDirection == "back track up": return self.__backTrackingUp()
+        if self.walkingDirection == "back track down": return self.__backTrackingDown()
+        if self.walkingDirection == "back track right": return self.__backTrackingRight()
+        if self.walkingDirection == "back track left": return self.__backTrackingLeft()
 
         #no more board left to explore 
         if self.lowerLimit >= self.upperLimit and self.leftLimit >= self.rightLimit:  
@@ -231,3 +151,81 @@ class Player:
         #self.pos_y += 1 
         print("returning same position")
         return self.pos_x, self.pos_y
+    
+    def __walkingUp(self): 
+        print("walking up")
+        #within 10 steps of upper bound
+        if self.pos_y in range(self.upperLimit, self.upperLimit+11): 
+            #move boundary 10 steps down
+            print("walking up and approached limit")
+            self.upperLimit += 10
+            self.walkingDirection = "back track down"
+            return self.pos_x, self.pos_y+1
+        #continue walking up
+        return self.pos_x, self.pos_y-1
+    
+
+    def __walkingDown(self): 
+        print("walking down")
+        #within 10 steps of lower bound 
+        if self.pos_y in range(self.lowerLimit-10, self.lowerLimit):
+            print("walking down and approached limit")
+            #move boundary 10 steps up from limit
+            self.lowerLimit -= 10
+            self.walkingDirection = "back track up"
+            return self.pos_x, self.pos_y-1
+        #continue walking down
+        return self.pos_x, self.pos_y+1
+    
+    def __walkingRight(self): 
+        print("walking right")
+        #within 10 steps of right bound
+        if self.pos_x in range(self.rightLimit-10, self.rightLimit):
+            print("walking right and approached limit")
+            #move boundary 10 steps left 
+            self.rightLimit -= 10
+            self.walkingDirection = "back track left"
+            return self.pos_x-1, self.pos_y
+        #continue walking right
+        return self.pos_x+1, self.pos_y
+    
+    def __walkingLeft(self):
+        print("walking left")
+        #within 10 steps of left bound
+        if self.pos_x in range(self.leftLimit, self.leftLimit+11):
+            print("walking left and approached limit")
+            #move boundary 10 steps right
+            self.leftLimit += 10
+            self.walkingDirection = "back track right"
+            return self.pos_x+1, self.pos_y
+        #continue walking left
+        return self.pos_x-1, self.pos_y
+    
+    def __backTrackingUp(self):
+        print("back tracking up")
+        #we are 10 steps above lower limit
+        if self.pos_y == self.lowerLimit-9:
+            self.walkingDirection = "right"
+        return self.pos_x, self.pos_y-1
+
+    def __backTrackingDown(self):
+        print("back tracking down")
+        #we are 10 steps below upper limit
+        if self.pos_y == self.upperLimit+9:
+            self.walkingDirection == "left"
+        return self.pos_x, self.pos_y+1
+    
+    def __backTrackingRight(self):
+        print("back tracking right")
+        #we are 10 steps left from left limit
+        if self.pos_x == self.leftLimit+9:
+            self.walkingDirection = "down"
+        return self.pos_x+1, self.pos_y
+    
+    def __backTrackingLeft(self):
+        print("back tracking left")
+        #we are 10 steps left from right limit
+        if self.pos_x == self.rightLimit-9: 
+            self.walkingDirection = "up"
+        return self.pos_x-1, self.pos_y
+    
