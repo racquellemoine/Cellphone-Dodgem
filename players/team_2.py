@@ -40,7 +40,11 @@ class Player:
         # A point in path is a 3 variable tuple that looks like (pos_x, pos_y, "stall/point")
         self.path_to_follow = [(None, None, None)] * \
             len(self.stalls_to_visit)  # cross-check this once
-        populate_path()
+        self.populate_path()
+
+    # simulator calls this function when the player collects an item from a stall
+    def collect_item(self, stall_id):
+        pass
 
     def populate_path(self):
         # populate the self.path_to_follow public variable
