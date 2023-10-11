@@ -686,7 +686,6 @@ class DodgemGame(tk.Tk):
         # check collision with obstacles
         for i, player_state in enumerate(self.player_states):
             for stall in self.obstacles:
-                collision = False
                 if player_state.wait == 0 and self.check_collision_obstacle(stall.id, stall.x, stall.y, player_state.pos_x, player_state.pos_y, \
                                                                             new_positions[i][0], new_positions[i][1], player_state.color):
                     update_move[i] = False
@@ -694,35 +693,37 @@ class DodgemGame(tk.Tk):
                     logs[i] += " Collided with obstacle " + str(stall.id)
                     collision = True
 
-                if new_positions[i][0] > 100 and new_positions[i][1] > 100:
-                    new_positions[i][0], new_positions[i][1] = 100, 100
-                    logs[i] += " Collided with boundary"
-                    collision = True
-                elif new_positions[i][0] > 100:
-                    new_positions[i][0] = 100
-                    logs[i] += " Collided with boundary"
-                    collision = True
-                elif new_positions[i][1] > 100:
-                    new_positions[i][1] = 100
-                    logs[i] += " Collided with boundary"
-                    collision = True
-                elif new_positions[i][0] < 0 and new_positions[i][1] < 0:
-                    new_positions[i][0], new_positions[i][1] = 0, 0
-                    logs[i] += " Collided with boundary"
-                    collision = True
-                elif new_positions[i][0] < 0:
-                    new_positions[i][0] = 0
-                    logs[i] += " Collided with boundary"
-                    collision = True
-                elif new_positions[i][1] < 0:
-                    new_positions[i][1] = 0
-                    logs[i] += " Collided with boundary"
-                    collision = True
-                
-                if collision:
+            collision = False
+            if new_positions[i][0] >= 100 and new_positions[i][1] >= 100:
+                new_positions[i][0], new_positions[i][1] = 100, 100
+                logs[i] += " Collided with boundary"
+                collision = True
+            elif new_positions[i][0] >= 100:
+                new_positions[i][0] = 100
+                logs[i] += " Collided with boundary"
+                collision = True
+            elif new_positions[i][1] >= 100:
+                new_positions[i][1] = 100
+                logs[i] += " Collided with boundary"
+                collision = True
+            elif new_positions[i][0] <= 0 and new_positions[i][1] <= 0:
+                new_positions[i][0], new_positions[i][1] = 0, 0
+                logs[i] += " Collided with boundary"
+                collision = True
+            elif new_positions[i][0] <= 0:
+                new_positions[i][0] = 0
+                logs[i] += " Collided with boundary"
+                collision = True
+            elif new_positions[i][1] <= 0:
+                new_positions[i][1] = 0
+                logs[i] += " Collided with boundary"
+                collision = True
+            
+            if collision:
+                if self.player_states[i].wait == 0:
                     self.player_states[i].wait = 10
-                    self.players[i].encounter_obstacle()
-                    interrupt[i] = True
+                self.players[i].encounter_obstacle()
+                interrupt[i] = True
 
         # collect items
         for i, player_state in enumerate(self.player_states):
@@ -770,7 +771,7 @@ class DodgemGame(tk.Tk):
                 
             self.canvas.itemconfigure(self.turn_comp, text="TURN: " + str(self.turn_no) + "/" + str(self.T))
 
-        for player_state in self.player_states:
+        for index, player_state in enumerate(self.player_states):
             with open(player_state.log, 'a') as f:
                 f.write("TURN " + str(self.turn_no) + ": " + logs[index] + "\n")
 
