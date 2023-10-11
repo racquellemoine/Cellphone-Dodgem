@@ -124,7 +124,6 @@ class Player:
         for o in obstacles:
             if o not in polys:
                 polys[o] = self.__build_poly(o)
-                print(o)
                 self.need_update = True
 
     def __merge_nearby_polys(self, centers):
@@ -136,7 +135,7 @@ class Player:
             cluster_centers = centers[clusters == i]
             cluster_vertices = np.empty((len(cluster_centers) * 4, 2))
             for i, center in enumerate(cluster_centers):
-                for j, d in enumerate(np.array([[2, 2], [2, -2], [-2, 2], [-2, -2]])):
+                for j, d in enumerate(np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]]) * 2):
                     cluster_vertices[i * 4 + j] = center + d
             hulls.append(cluster_vertices[ConvexHull(cluster_vertices).vertices])
         
@@ -145,8 +144,8 @@ class Player:
     def __update_vg(self):
         if not self.polys:
             return
-        p = list(self.polys.values())
-        # p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
+        # p = list(self.polys.values())
+        p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
         self.graph.build(p, self.workers)
 
     def __update_path(self):
@@ -156,7 +155,10 @@ class Player:
         if not self.polys:
             new_path = [s, t]
         else:
-            new_path = self.graph.shortest_path(s, t)
+            try:
+                new_path = self.graph.shortest_path(s, t)
+            except:
+                new_path = [s, t]
         for p in new_path[1:]:
             self.path.append(p)
 
