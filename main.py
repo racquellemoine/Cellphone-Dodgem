@@ -11,5 +11,6 @@ if __name__ == '__main__':
     parser.add_argument("--seed", "-s", default=2, help="Seed")
     parser.add_argument("--gui", "-g", default="True", help="GUI")
     parser.add_argument("--scale", "-sc", default=10, help="Scale factor")
+    parser.add_argument("--interval", "-i", default=100, help="Time in ms after which the next iteration is executed")
     args = parser.parse_args()
     dodgem_game = DodgemGame(args)

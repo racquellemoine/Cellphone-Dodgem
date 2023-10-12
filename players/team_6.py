@@ -1,160 +1,222 @@
-from dataclasses import dataclass
-import math
-import random
-import sys
+import fast_tsp, math, random
+from sys import maxsize as INT_MAX
 
 random.seed(2)
 
 HORIZON = 10 # how far we can look
 DANGER_ZONE = 0.5 # how close we can get to an obstacle/person
 
-@dataclass
 class Vector:
-    x: float
-    y: float
+    def __init__(self, _x, _y):
+        self.x = _x
+        self.y = _y
+    
+    def __str__(self):
+        """Human-readable string representation of the vector."""
+        return f'{self.x:g}i + {self.y:g}j'
+
+    def __repr__(self):
+        """Unambiguous string representation of the vector."""
+        return repr((self.x, self.y))
+
+    def __add__(self, other):
+        """Vector addition."""
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        """Vector subtraction."""
+        return Vector(self.x - other.x, self.y - other.y)
+
+    def __matmul__(self, other):
+        """Vector cross product."""
+        if isinstance(other, Vector):
+            return self.x*other.y - self.y*other.x
+        raise NotImplementedError('Can only take cross product of two vectors')
+
+    def __mul__(self, multiplier):
+        """Multiplication of a vector by a scalar/vector."""
+        if isinstance(multiplier, Vector): # inner product
+            return self.x*multiplier.x + self.y*multiplier.y
+        elif isinstance(multiplier, int) or isinstance(multiplier, float): # scalar multiplication
+            return Vector(self.x*multiplier, self.y*multiplier)
+        raise NotImplementedError('Can only multiply Vector by a scalar or a vector')
+
+    def __rmul__(self, multiplier):
+        """Multiplication of a vector by a scalar/vector."""
+        return self.__mul__(multiplier)
+
+    def __neg__(self):
+        """Negation of the vector (invert through origin.)"""
+        return Vector(-self.x, -self.y)
+
+    def __truediv__(self, scalar):
+        """True division of the vector by a scalar."""
+        return Vector(self.x / scalar, self.y / scalar)
+
+    def __mod__(self, scalar):
+        """One way to implement modulus operation: for each component."""
+        return Vector(self.x % scalar, self.y % scalar)
+
+    def __abs__(self):
+        """Absolute value (magnitude) of the vector."""
+        return math.sqrt(self.x**2 + self.y**2)
+    
+    def dist2(self, other):
+        """The distance between vectors self and other."""
+        return abs(self - other)
+    
+    def normalize(self):
+        """The normalized vector (unit vector) in the direction of self."""
+        return self / abs(self)
+
+    def normalized_dir(self, other):
+        """The normalized direction vector from self to other."""
+        dist = self.dist2(other)
+        return Vector(0,0) if dist==0 else (other - self) / self.dist2(other)
+    
+    def left_90(self):
+        """The vector rotated 90 degrees counter-clockwise."""
+        return Vector(-self.y, self.x)
+    
+    def right_90(self):
+        """The vector rotated 90 degrees clockwise."""
+        return Vector(self.y, -self.x)
+    
+    def rotate(self, theta):
+        """The vector rotated by theta radians counter-clockwise."""
+        return Vector(self.x*math.cos(theta) - self.y*math.sin(theta), self.x*math.sin(theta) + self.y*math.cos(theta))
+    
+    def update_val(self, new_val):
+        """Update the value of the vector."""
+        self.x = new_val.x
+        self.y = new_val.y
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
         self.id = id
         self.name = name
         self.color = color
+        self.prev_pos = Vector(-1, -1)
         self.pos = Vector(initial_pos_x, initial_pos_y)
-        self.stalls_to_visit = stalls_to_visit
-        self.stalls_visited = []
-        self.curr_stall = self.__next_stall()
+        self.all_stalls = stalls_to_visit
+        self.stalls_next = list()
+
+        self.obstacles_known = list()
+        self.players_cached = list()
+        self.t_since_lkp = INT_MAX
+        self.last_ckpt = Vector(initial_pos_x, initial_pos_y)
+
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
-        self.known_obstacles = []
 
-        # unit vector representing direction of movement
-        self.dir = Vector(1, 0)
+        self.pos_last_lkp = Vector(initial_pos_x, initial_pos_y)
 
-        # next lookup checkpoint
-        self.next_ckpt = Vector(initial_pos_x, initial_pos_y)
+        self.__tsp()
 
-        # tolerance for reaching a checkpoint
-        self.epsilon = 0.0005
+        self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
+        # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
+        self.vicinity = 0.0005 # tolerance for reaching a checkpoint
+    
+    def __randunit(self):
+        """A random unit vector."""
+        theta = random.random() * 2 * math.pi
+        return Vector(math.cos(theta), math.sin(theta))
+    
+    def __tsp(self):
+        stalls = self.all_stalls
+        num = len(self.all_stalls)
+        distances = [[0 for _ in range(num + 1)] for _ in range(num + 1)]
 
-        self.sign_x = 1
-        self.sign_y = 1
+        for i in range(num):
+            currVector =  Vector(stalls[i].x, stalls[i].y)
+            dist = self.pos.dist2(currVector)
+            distances[0][i+1] = math.ceil(dist)
 
-    def __calc_dist(self, a: Vector, b: Vector) -> float:
-        return math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2)
-
-    # returns normalized vector from a to b
-    def __normalize(self, source: Vector, dest: Vector) -> Vector:
-        dist = self.__calc_dist(source, dest)
-        if dist == 0:
-            return Vector(0,0)
-        return Vector((dest.x - source.x)/dist, (dest.y - source.y)/dist)
-
-    def __innerprod(self, a: Vector, b: Vector) -> float:
-        return a.x*b.x + a.y*b.y
+        for i in range(num):
+            for j in range(num):
+                currVector1 = Vector(stalls[i].x, stalls[i].y)
+                currVector2 = Vector(stalls[j].x, stalls[j].y)
+                dist = currVector1.dist2(currVector2)
+                distances[i+1][j+1] = math.ceil(dist)
+                
+        self.tsp_path = fast_tsp.find_tour(distances)
+        for i in self.tsp_path[1:]:
+            self.stalls_next.append(self.all_stalls[i-1])
 
     # returns (x,y) of next stall we wanna visit
     def __next_stall(self) -> Vector:
-        min_distance = sys.maxsize
-        curr_stall = None
-        for stall in self.stalls_to_visit:
-            curr_dist = self.__calc_dist(self.pos, stall)
-            if curr_dist < min_distance and stall not in self.stalls_visited:
-                min_distance =  curr_dist
-                curr_stall = stall
-        if curr_stall is None:
+        if len(self.stalls_next) == 0:
             return Vector(0,0)
-        self.stalls_visited.append(curr_stall)
-        return curr_stall
-
+        return Vector(self.stalls_next[0].x, self.stalls_next[0].y)
+    
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-        self.stalls_visited.append(self.curr_stall)
-        self.curr_stall = self.__next_stall()
+        #if you are at the next stall to visit, collect the item and remove the stall from the list
+        counter = 0
+        for stall in self.stalls_next:
+            if stall.id == stall_id:
+                self.stalls_next.pop(counter)
+                if counter != 0:
+                    print('Warning: The current stall is not the scheduled stall to visit.')
+                break
+            counter += 1
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        # update self.dir and self.next_ckpt according to new info
-        
-        self.dir = self.__normalize(self.pos, Vector(self.curr_stall.x, self.curr_stall.y))
-        safe_go = (10-DANGER_ZONE)/2 # how far we can go safely without lookup
+        self.t_since_lkp = 0
+        self.players_cached = [Vector(p[1],p[2]) for p in other_players]
 
-        # adjust direction based on obstacles & walls
-        for obstacle in obstacles:
-            if obstacle not in self.known_obstacles:
-                self.known_obstacles.append(Vector(obstacle[1], obstacle[2]))
-                # obstacle is a tuple of (x,y,radius)
+        # update obstacles
+        self.obstacles_known = [Vector(o[1],o[2]) for o in obstacles]
 
-        for obstacle in obstacles:
-            o = Vector(obstacle[0], obstacle[1])
-            u = self.__normalize(self.pos, o)
-            cos_theta = self.__innerprod(self.dir, u)
-            if cos_theta > 0:
-                # obstacle is in front of us
-                d = self.__calc_dist(self.pos, o)
-                # update safe_go
-                safe_go = min(safe_go, (d-DANGER_ZONE)/(2*cos_theta))
+    def avoid_players(self):
+        for player in self.players_cached:
+            if self.pos.dist2(player) < DANGER_ZONE:
+                self.dir = self.pos.normalized_dir(player).left_90()
+                break
 
-        # look at other players
-        for player in other_players:
-            p = Vector(player[1], player[2])
-            u = self.__normalize(self.pos, p)
-            cos_theta = self.__innerprod(self.dir, u)
-            if cos_theta > 0:
-                # player is in front of us
-                d = self.__calc_dist(self.pos, p)
-                # update safe_go
-                safe_go = min(safe_go, (d-DANGER_ZONE)/(2*cos_theta))
-        
-        self.next_ckpt = Vector(self.pos.x + safe_go*self.dir.x, self.pos.y + safe_go*self.dir.y)
+    def avoid_obstacles(self):
+        for obstacle in self.obstacles_known:
+            if self.pos.dist2(obstacle) < DANGER_ZONE+3:
+                self.dir = self.pos.normalized_dir(obstacle).left_90()
+                break
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        # Try moving in the opposite direction of the current dir vector
-        new_pos = Vector(self.pos.x - self.dir.x, self.pos.y - self.dir.y)
-        if new_pos not in self.known_obstacles:
-            self.pos = new_pos
-            self.next_ckpt = Vector(self.pos.x + self.dir.x, self.pos.y + self.dir.y)
-            return
-
-        # If the opposite direction is blocked, try moving in a perpendicular direction
-        if self.dir.x == 0:
-            # If the current dir vector is vertical, try moving horizontally
-            new_pos = Vector(self.pos.x + 1, self.pos.y)
-            if new_pos not in self.known_obstacles:
-                self.dir = Vector(1, 0)
-                self.pos = new_pos
-                self.next_ckpt = Vector(self.pos.x + self.dir.x, self.pos.y + self.dir.y)
-                return
-            new_pos = Vector(self.pos.x - 1, self.pos.y)
-            if new_pos not in self.known_obstacles:
-                self.dir = Vector(-1, 0)
-                self.pos = new_pos
-                self.next_ckpt = Vector(self.pos.x + self.dir.x, self.pos.y + self.dir.y)
-                return
-        else:
-            # If the current dir vector is horizontal, try moving vertically
-            new_pos = Vector(self.pos.x, self.pos.y + 1)
-            if new_pos not in self.known_obstacles:
-                self.dir = Vector(0, 1)
-                self.pos = new_pos
-                self.next_ckpt = Vector(self.pos.x + self.dir.x, self.pos.y + self.dir.y)
-                return
-            new_pos = Vector(self.pos.x, self.pos.y - 1)
-            if new_pos not in self.known_obstacles:
-                self.dir = Vector(0, -1)
-                self.pos = new_pos
-                self.next_ckpt = Vector(self.pos.x + self.dir.x, self.pos.y + self.dir.y)
-                return
+        # theoretically, we would never encounter an obstacle
+        # print("Warning: Encountered an obstacle.")
+        self.prev_pos.update_val(self.pos)
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
-        
+        if len(self.stalls_next) == 0:
+            self.dir = Vector(0,0)
+            return 'move'
+        if self.t_since_lkp>0:
+            self.prev_pos.update_val(self.pos)
+        self.t_since_lkp += 1
         self.pos = Vector(pos_x, pos_y) # update current position
+        if self.pos.dist2(self.prev_pos) < self.vicinity: # if we are not moving
+            self.dir = self.__randunit()
+            # if self.players_cached:
+            #     self.avoid_players()
+            return 'move'
+        else:
+            self.dir = self.pos.normalized_dir(self.__next_stall())
+            self.avoid_obstacles()
+            # if self.players_cached:
+            #     self.avoid_players()
+
+        # if self.t_since_lkp>=HORIZON/2:
+        if self.pos_last_lkp.dist2(self.pos) > 5:
+            self.pos_last_lkp.update_val(self.pos)
+            # print("Looking up")
+            return 'lookup'
         
-        vab = Vector(self.next_ckpt.x - pos_x, self.next_ckpt.y - pos_y)
-        return 'lookup' if self.__innerprod(vab, self.dir) < self.epsilon else 'move'
+        return 'move'
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
