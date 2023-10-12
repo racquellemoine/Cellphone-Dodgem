@@ -56,6 +56,7 @@ class Player:
         self.goal_stall = None
         self.is_rrt_planning = False
         self.rrt_path = []
+        self.collided = False
 
     # simulator calls this function when the player collects an item from a stall
 
@@ -74,40 +75,60 @@ class Player:
                 self.distance_grid[i + 1][j + 1] = math.ceil(distance2)
 
         self.tsp_path = fast_tsp.find_tour(self.distance_grid)
-        # print("THIS IS THE PATH", self.tsp_path)
+        print("THIS IS THE PATH", self.tsp_path)
 
     def collect_item(self, stall_id):
-        for stall in self.stalls_to_visit:
-            if stall.id == stall_id:
-                self.stalls_to_visit.remove(stall)
-        self.goal_stall = None
-        return stall_id
+        # for stall in self.stalls_to_visit:
+        #     if stall.id == stall_id:
+        #         self.stalls_to_visit.remove(stall)
+        # self.goal_stall = None
+        # return stall_id
+
+        # if len(self.queue) > 0:
+
+        if stall_id == self.queue[0].id:
+            self.queue.popleft()
+            self.goal_stall = None
 
     def end_game_tactic(self):
         self.get_action(0,0)
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        self.obstacles_list.append(other_players)
+        for obstacle in obstacles:
+            # print(f'adding obstacle to list {obstacle}')
+            if obstacle not in self.obstacles_list:
+                self.obstacles_list.append(obstacle)
+
+        # need to do something with how we only want to record if people are around us
+        # otherwise, it doesn't matter, we should pop them out.
         self.other_players_list.append(other_players)
         return
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        # print('Encountered obstacle')
-        self.vx = random.random()
-        self.vy = math.sqrt(1 - self.vx ** 2)
+        print('Encountered obstacle')
+        self.collided = True
+
+        # vx = self.goal_stall.x - self.pos_x
+        # vy = self.goal_stall.y - self.pos_y
+        #
+        # self.vx, self.vy = self._normalize(vx, vy)
         self.sign_x *= -1
         self.sign_y *= -1
 
-    # simulator calls this function to get the action 'lookup' or 'move' from the player
+
+    # simulator calls this function to get the action 'lookup', 'move', or 'lookup move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
         
         self.pos_x = pos_x
         self.pos_y = pos_y
 
-        return 'move'
+        # return 'move'
+
+        #lookup whole time
+        return 'lookup move'
 
     #########################################################
 
@@ -343,7 +364,8 @@ class Player:
 
     def _is_collision_free(self, obstacles, other_players, new_point):
         """
-        Iterate through the obstacles and check that our point is not colliding
+        Iterate through the obstacles and check that our point is not colliding.
+        If there are no obstacles/players we detected, then we are collision free.
 
         Args:
             obstacles - list of obstacles (x,y) in the game we know
@@ -354,13 +376,18 @@ class Player:
             Bool - True if collision free, False otherwise
         """
 
+        # print(f'obs {obstacles} players {other_players} new point {new_point}')
+
         for o in obstacles:
-            if self._check_collision_obstacle(o, new_point):
-                return False
+            if len(o) > 0:
+                x, y = o[1], o[2]
+                if self._check_collision_obstacle((x, y), new_point):
+                    return False
 
         for p in other_players:
-            if self._check_collision_obstacle(p, new_point):
-                return False
+            if len(p) > 0:
+                if self._check_collision_obstacle(p, new_point):
+                    return False
 
         return True
 
@@ -374,9 +401,10 @@ class Player:
 
 
         begin = datetime.utcnow()
-        while datetime.utcnow() - begin < self.calc_time:
+        while datetime.utcnow() - begin < self.max_time:
 
             new_point = self._get_new_point(self.XDIM, self.YDIM, goal_stall)
+            # print(f'obstacles in RRT {obstacles}')
             if self._is_collision_free(obstacles, other_players, new_point):
 
                 closest_node = self._nearest_node(nodes, new_point)
@@ -408,58 +436,6 @@ class Player:
 
         return rrt_path
 
-
-    #########################################################
-
-    def _calculate_trajectory(self, start, end):
-        """
-        Return list of points representing a line segment between a start and end node
-
-        Args:
-            start (x,y)- tuple representing the start node
-            end (x,y) - tuple representing the end node
-
-        Returns:
-            trajectory List[tuple] - list of points representing the line segment between start and end
-
-        """
-
-        vx = end[0] - start[0]
-        vy = end[1] - start[1]
-
-        vx, vy = self._normalize(vx, vy)
-
-        # Calculate entire traj from start to end
-        trajectory = []
-        curr_pos = start
-        while curr_pos != end:
-            print("Calculating trajectory")
-            trajectory.append(curr_pos)
-            curr_pos = (curr_pos[0] + vx, curr_pos[1] + vy)
-
-        return trajectory
-
-    def _is_trajectory_collision_free(self, obstacles, other_players, trajectory):
-        """
-        Check if entire trajectory is collision free
-
-        Args:
-            obstacles - list of obstacles (x,y) in the game we know
-            other_players - list of other players' current position (x,y)
-            trajectory - list of points representing the line segment between start and end
-
-        Returns:
-            Bool - True if collision free, False otherwise
-        """
-
-        for point in trajectory:
-            if not self._is_collision_free(obstacles, other_players, point):
-                return False
-
-        return True
-
-
-
     #########################################################
 
     # simulator calls this function to get the next move from the player
@@ -472,61 +448,94 @@ class Player:
         # if we detect an obstacle or player in our path, we want to use RRT to plan a path around it
         # if we don't detect anything, we want to move directly to the goal stall
 
+        """
+        use intersection for the trajectory calcs --> i.e DON'T use calculate trajectory
+        BUT use trajectory collision free for the line segment between current position and goal stall
+        VERSUS the obstacles --> so can we just do  
+        
+        just do is collision free. then do original returning of points
+
+        YES. works. now, we need to do incorporate looking up.
+
+        can we also do some behavior for when we do collide?
+
+        why isn't
+        
+        """
+
+        if self.collided:
+            print("detected collision?")
+            self.collided = False
+
+            self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+            new_pos_x = self.pos_x + self.sign_x * self.vx
+            new_pos_y = self.pos_y + self.sign_y * self.vy
+
+            print("after collision")
+            return new_pos_x, new_pos_y
+
         if self.goal_stall is None and len(self.queue) > 0:
-            self.goal_stall = self.queue.popleft()
+            self.goal_stall = self.queue.popleft() # so should i NOT remove it in encounter obstacle?
             # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
 
         if self.goal_stall:
 
+            goal_point = self.goal_stall.x, self.goal_stall.y
+
             # TAKES TOO LONG --> i should only do this based on intersections of line segments
             # is that how the TA's did it?
-            trajectory = self._calculate_trajectory((self.pos_x, self.pos_y), (self.goal_stall.x, self.goal_stall.y))
-
-            print("trajectory computed")
+            # trajectory = self._calculate_trajectory((self.pos_x, self.pos_y), (self.goal_stall.x, self.goal_stall.y))
+            #
+            # print("trajectory computed")
 
             if not self.is_rrt_planning:
 
-                # Check if trajectory is collision free
-                if self._is_trajectory_collision_free(self.obstacles_list, self.other_players_list, trajectory):
+                # if len(self.obstacles_list) > 0
+
+                if self._is_collision_free(self.obstacles_list, self.other_players_list, goal_point):
+                    vx = self.goal_stall.x - self.pos_x
+                    vy = self.goal_stall.y - self.pos_y
+                    self.sign_x = 1
+                    self.sign_y = 1
+                    self.vx, self.vy = self._normalize(vx, vy)
+
+                    self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+                    new_pos_x = self.pos_x + self.sign_x * self.vx
+                    new_pos_y = self.pos_y + self.sign_y * self.vy
+
+                    # print(f'Moving to {new_pos_x}, {new_pos_y}')
+
                     print("No obstacles in the way, moving directly to goal stall")
-                    if len(trajectory) > 0:
-                        next_point = trajectory.pop(0)
-                        new_pos_x, new_pos_y = next_point
-                        return new_pos_x, new_pos_y
+                    return new_pos_x, new_pos_y
                 else:
                     print("Obstacle detected, planning with RRT")
                     self.is_rrt_planning = True
                     self.rrt_path = self.rrt(self.goal_stall, self.obstacles_list, self.other_players_list)
 
+
             # Currently planning with RRT
             if len(self.rrt_path) > 0:
                 next_point = self.rrt_path.pop(0)
                 new_pos_x, new_pos_y = next_point
+
+                self._bounce_off_boundaries(self.pos_x, self.pos_y)
+                print("following RRT path")
                 return new_pos_x, new_pos_y
             else:
                 self.is_rrt_planning = False
                 self.rrt_path = []
 
-            # #########################################################
-            #
-            # vx = self.goal_stall.x - self.pos_x
-            # vy = self.goal_stall.y - self.pos_y
-            # self.sign_x = 1
-            # self.sign_y = 1
-            # self.vx, self.vy = self._normalize(vx, vy)
-            #
-            # self._bounce_off_boundaries(self.pos_x, self.pos_y)
-            #
-            # new_pos_x = self.pos_x + self.sign_x * self.vx
-            # new_pos_y = self.pos_y + self.sign_y * self.vy
-            #
-            # # print(f'Moving to {new_pos_x}, {new_pos_y}')
-            # return new_pos_x, new_pos_y
 
         elif self.goal_stall is None and len(self.queue) == 0:
+            self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+
+            print("No more stalls to visit, stand still")
             return self.pos_x, self.pos_y
 
-        elif self.T_theta <= 10:
-            print("End game tactic")
-            self.end_game_tactic()
+        # elif self.T_theta <= 10:
+        #     print("End game tactic")
+        #     self.end_game_tactic()
 
