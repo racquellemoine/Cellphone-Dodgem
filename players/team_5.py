@@ -66,7 +66,7 @@ class Player:
                 d = self.__calc_distance(stv[i].x, stv[i].y, stv[j].x, stv[j].y)
                 self.dists[i+1][j+1] = math.ceil(d)
                 
-        self.tsp_path = fast_tsp.find_tour(self.dists)
+        self.tsp_path = fast_tsp.find_tour(self.dists) if n > 1 else [0, 1]
 
     def __calc_distance(self, x1, y1, x2, y2):
         return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
@@ -105,6 +105,7 @@ class Player:
 
         return self.__dot(a, b) > fov
 
+    # deprecated
     def __build_poly(self, obstacle):
         o_x, o_y = obstacle[1], obstacle[2]
 
@@ -144,8 +145,10 @@ class Player:
     def __update_vg(self):
         if not self.polys:
             return
-        p = list(self.polys.values())
-        # p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
+        if len(self.polys) == 1:
+            p = list(self.polys.values())
+        else :
+            p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])
         self.graph.build(p, self.workers)
 
     def __update_path(self):
