@@ -111,8 +111,10 @@ class Player:
         self.num_players = num_players
 
         self.pos_last_lkp = Vector(initial_pos_x, initial_pos_y)
+        self.should_lookup = False
 
         self.__tsp()
+        self.times_lkp = 0
 
         self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
         # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
@@ -141,8 +143,30 @@ class Player:
                 distances[i+1][j+1] = math.ceil(dist)
                 
         self.tsp_path = fast_tsp.find_tour(distances)
+        to_print = []
         for i in self.tsp_path[1:]:
             self.stalls_next.append(self.all_stalls[i-1])
+            to_print.append(self.all_stalls[i-1].id)
+        print(to_print)
+
+    def __update_tsp(self):
+        # Assuming 'stalls_to_visit' is a list of stalls that the player needs to visit
+        # and 'self.pos' is the current player position
+        stalls_to_visit = self.stalls_next
+        # if self.pos in stalls_to_visit:
+        #     # If the current position is in the list of stalls to visit, remove it
+        #     stalls_to_visit.remove(self.pos)
+
+        # Now, find the nearest stall to the player's current position
+        nearest_stall_index = min(range(len(stalls_to_visit)), key=lambda i: self.pos.dist2(stalls_to_visit[i]))
+
+        # Reorder the remaining stalls based on the nearest stall to the player
+        ordered_stalls = stalls_to_visit[nearest_stall_index:] + stalls_to_visit[:nearest_stall_index]
+
+        self.stalls_next = list()
+        self.stalls_next = ordered_stalls
+        for stall in self.stalls_next:
+            print(stall.id, end=" ")
 
     # returns (x,y) of next stall we wanna visit
     def __next_stall(self) -> Vector:
@@ -171,16 +195,17 @@ class Player:
         # update obstacles
         self.obstacles_known = [Vector(o[1],o[2]) for o in obstacles]
 
-    def avoid_players(self):
+    def __avoid_players(self):
         for player in self.players_cached:
             if self.pos.dist2(player) < DANGER_ZONE:
                 self.dir = self.pos.normalized_dir(player).left_90()
                 break
 
-    def avoid_obstacles(self):
+    def __avoid_obstacles(self):
         for obstacle in self.obstacles_known:
-            if self.pos.dist2(obstacle) < DANGER_ZONE+3:
+            if self.pos.dist2(obstacle) < DANGER_ZONE+2.5:
                 self.dir = self.pos.normalized_dir(obstacle).left_90()
+                
                 break
 
     # simulator calls this function when the player encounters an obstacle
@@ -188,6 +213,9 @@ class Player:
         # theoretically, we would never encounter an obstacle
         # print("Warning: Encountered an obstacle.")
         self.prev_pos.update_val(self.pos)
+        self.__update_tsp()
+        self.should_lookup = True
+        print("encountered obstacle")
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
@@ -206,15 +234,15 @@ class Player:
             return 'move'
         else:
             self.dir = self.pos.normalized_dir(self.__next_stall())
-            self.avoid_obstacles()
+            self.__avoid_obstacles()
             # if self.players_cached:
             #     self.avoid_players()
 
         # if self.t_since_lkp>=HORIZON/2:
-        if self.pos_last_lkp.dist2(self.pos) > 5:
+        if self.pos_last_lkp.dist2(self.pos) > 4 or self.should_lookup:
             self.pos_last_lkp.update_val(self.pos)
-            # print("Looking up")
-            return 'lookup'
+            self.should_lookup = False
+            return 'lookup move'
         
         return 'move'
     
