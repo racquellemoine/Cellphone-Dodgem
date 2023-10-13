@@ -151,11 +151,7 @@ class Player:
 
     def __update_tsp(self):
         # Assuming 'stalls_to_visit' is a list of stalls that the player needs to visit
-        # and 'self.pos' is the current player position
         stalls_to_visit = self.stalls_next
-        # if self.pos in stalls_to_visit:
-        #     # If the current position is in the list of stalls to visit, remove it
-        #     stalls_to_visit.remove(self.pos)
 
         # Now, find the nearest stall to the player's current position
         nearest_stall_index = min(range(len(stalls_to_visit)), key=lambda i: self.pos.dist2(stalls_to_visit[i]))
@@ -167,6 +163,7 @@ class Player:
         self.stalls_next = ordered_stalls
         for stall in self.stalls_next:
             print(stall.id, end=" ")
+        print("DONE")
 
     # returns (x,y) of next stall we wanna visit
     def __next_stall(self) -> Vector:
@@ -203,9 +200,10 @@ class Player:
 
     def __avoid_obstacles(self):
         for obstacle in self.obstacles_known:
-            if self.pos.dist2(obstacle) < DANGER_ZONE+2.5:
+            if self.pos.dist2(obstacle) < DANGER_ZONE+2.3:
                 self.dir = self.pos.normalized_dir(obstacle).left_90()
-                
+                # self.__update_tsp()
+                # print("avoiding obstacle")
                 break
 
     # simulator calls this function when the player encounters an obstacle
@@ -213,7 +211,7 @@ class Player:
         # theoretically, we would never encounter an obstacle
         # print("Warning: Encountered an obstacle.")
         self.prev_pos.update_val(self.pos)
-        self.__update_tsp()
+        
         self.should_lookup = True
         print("encountered obstacle")
 
@@ -239,10 +237,16 @@ class Player:
             #     self.avoid_players()
 
         # if self.t_since_lkp>=HORIZON/2:
-        if self.pos_last_lkp.dist2(self.pos) > 4 or self.should_lookup:
+        if self.pos_last_lkp.dist2(self.pos) > 3 or self.should_lookup:
             self.pos_last_lkp.update_val(self.pos)
-            self.should_lookup = False
+            # self.should_lookup = False
+            # self.times_lkp += 1
+            self.__update_tsp()
             return 'lookup move'
+        
+        # if self.times_lkp == 2:
+        #     self.times_lkp = 0
+        #     self.__update_tsp()
         
         return 'move'
     
