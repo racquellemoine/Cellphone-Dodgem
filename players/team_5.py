@@ -14,7 +14,7 @@ random.seed(2)
 
 DEBUG = False
 LOOKUP_INTERVAL = 1
-OBSTACLE_HITBOX_SIZE = 2.2
+OBSTACLE_HITBOX_SIZE = 2.1
 STALL_HITBOX_SIZE = 2
 
 class Position():
