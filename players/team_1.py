@@ -85,10 +85,21 @@ class Player:
         # return stall_id
 
         # if len(self.queue) > 0:
+        print(f'queue before collecting {len(self.queue)}')
+        print(f'collecting item {stall_id}')
 
         if stall_id == self.queue[0].id:
             self.queue.popleft()
             self.goal_stall = None
+
+        # for stall in self.queue:
+        #     if stall.id == stall_id:
+        #         print("Stall id: ", stall.id)
+        #         self.queue.remove(stall)
+        #         self.goal_stall = None
+        #         break
+
+        print(f'queue after collecting {len(self.queue)}')
 
     def end_game_tactic(self):
         self.get_action(0,0)
@@ -399,12 +410,13 @@ class Player:
         iter_count = 0
         rrt_path = []
 
-
+        """should it keep calling it and updating it as it goes, i.e, the current position is updated?"""
         begin = datetime.utcnow()
         while datetime.utcnow() - begin < self.max_time:
+            print(f'iter {iter_count}')
 
             new_point = self._get_new_point(self.XDIM, self.YDIM, goal_stall)
-            # print(f'obstacles in RRT {obstacles}')
+
             if self._is_collision_free(obstacles, other_players, new_point):
 
                 closest_node = self._nearest_node(nodes, new_point)
@@ -417,6 +429,8 @@ class Player:
                     parents[new_node] = closest_node
 
                     if self._win_condition(new_node, goal_stall):
+
+                        print("RRT win condition reached")
 
                         # backtrack to get path
                         curr_node = new_node
@@ -436,13 +450,24 @@ class Player:
 
         return rrt_path
 
+    def _get_next_tsp_node(self):
+        """
+        Get the next node in the tsp path and set it as the goal stall.
+
+        We do not pop it from the queue until we collect it.
+        """
+        if len(self.queue) > 0:
+            #don't pop until we collect it!
+            self.goal_stall = self.queue[0]
+
+
     #########################################################
 
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
 
-        print("get next move")
+        # print("get next move")
 
         # we want to calculate the expected trajectory between current position and goal stall
         # if we detect an obstacle or player in our path, we want to use RRT to plan a path around it
@@ -463,6 +488,12 @@ class Player:
         
         """
 
+        # if we just start or when we finish collecting an item
+        if self.goal_stall is None and len(self.queue) > 0:
+            self._get_next_tsp_node()
+            # self.goal_stall = self.queue.popleft() # so should i NOT remove it in encounter obstacle?
+            # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
+
         if self.collided:
             print("detected collision?")
             self.collided = False
@@ -474,10 +505,6 @@ class Player:
 
             print("after collision")
             return new_pos_x, new_pos_y
-
-        if self.goal_stall is None and len(self.queue) > 0:
-            self.goal_stall = self.queue.popleft() # so should i NOT remove it in encounter obstacle?
-            # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
 
         if self.goal_stall:
 
@@ -513,6 +540,7 @@ class Player:
                     print("Obstacle detected, planning with RRT")
                     self.is_rrt_planning = True
                     self.rrt_path = self.rrt(self.goal_stall, self.obstacles_list, self.other_players_list)
+                    print(f'RRT path {self.rrt_path}')
 
 
             # Currently planning with RRT
@@ -524,6 +552,7 @@ class Player:
                 print("following RRT path")
                 return new_pos_x, new_pos_y
             else:
+                print("RRT path finished, moving directly to goal stall")
                 self.is_rrt_planning = False
                 self.rrt_path = []
 
