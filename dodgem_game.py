@@ -25,7 +25,7 @@ class Stall():
 
 class DodgemGame(tk.Tk):
     def __init__(self, args):
-        if args.disable_tsp == "True" or args.disable_tsp == "true":
+        if args.disable_tsp == "False" or args.disable_tsp == "false":
             import fast_tsp
 
         super().__init__()
