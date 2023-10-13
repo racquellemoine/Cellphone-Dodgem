@@ -125,7 +125,7 @@ class Player:
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-    #########################################################
+     #########################################################
     #                  From dodgem_game.py                  #
     #########################################################
 
@@ -184,10 +184,10 @@ class Player:
 
         return False
 
-    def _check_collision_obstacle(self, obstacle, point):
+    def _check_collision_obstacle(self, obstacle, new_point):
         obstacle_x, obstacle_y = obstacle
-        p_x, p_y = point.x, point.y
-        new_p_x, new_p_y = self.goal_stall.x, self.goal_stall.y ## MAYBE DONT USE??
+        p_x, p_y = self.pos_x, self.pos_y
+        new_p_x, new_p_y = new_point
 
         c1x, c1y = obstacle_x - 1, obstacle_y - 1
         c2x, c2y = obstacle_x + 1, obstacle_y - 1
