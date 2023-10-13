@@ -7,8 +7,20 @@ import numpy as np
 from collections import deque, defaultdict
 from itertools import chain
 from sklearn.cluster import AgglomerativeClustering
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, Delaunay
+from shapely.geometry import Polygon
+import matplotlib.pyplot as plt
 random.seed(2)
+
+DEBUG = False
+LOOKUP_INTERVAL = 1
+OBSTACLE_HITBOX_SIZE = 2.2
+STALL_HITBOX_SIZE = 2
+
+class Position():
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -127,21 +139,37 @@ class Player:
                 polys[o] = self.__build_poly(o)
                 self.need_update = True
 
-    def __merge_nearby_polys(self):
-        centers = np.array(list(self.polys.keys()))[:,1:]
-        ac = AgglomerativeClustering(n_clusters=None, linkage='single', metric='euclidean', distance_threshold=math.sqrt(32))
-        clusters = ac.fit(centers).labels_
+    def __merge_nearby_obstacles(self):
+        obstacle_centers = np.array(list(self.polys.keys()))[:,1:]
+        ac = AgglomerativeClustering(n_clusters=None, linkage='single', metric='euclidean', distance_threshold=math.sqrt(2 * (OBSTACLE_HITBOX_SIZE * 2) ** 2))
+        clusters = ac.fit(obstacle_centers).labels_
         
-        hulls = []
-        for i in range(1, clusters.max() + 1):
-            cluster_centers = centers[clusters == i]
+        blobs = []
+        for i in range(0, clusters.max() + 1):
+            cluster_centers = obstacle_centers[clusters == i]
             cluster_vertices = np.empty((len(cluster_centers) * 4, 2))
             for i, center in enumerate(cluster_centers):
-                for j, d in enumerate(np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]]) * 2):
+                for j, d in enumerate(np.array([[1, 1], [1, -1], [-1, 1], [-1, -1]]) * OBSTACLE_HITBOX_SIZE):
                     cluster_vertices[i * 4 + j] = center + d
-            hulls.append(cluster_vertices[ConvexHull(cluster_vertices).vertices])
+            hull = ConvexHull(cluster_vertices)
+            blob = cluster_vertices[hull.vertices]
+            for stall_center in self.stalls_to_visit + [Position(self.pos_x, self.pos_y)]:
+                if Delaunay(blob).find_simplex((stall_center.x, stall_center.y)):
+                    stall = Polygon([(stall_center.x + d1, stall_center.y + d2) for d1, d2 in np.array([[1, 1], [1, -1], [-1, -1], [-1, 1]]) * STALL_HITBOX_SIZE])
+                    blob = list(Polygon(blob).difference(stall).exterior.coords)
+            blobs.append(blob)
         
-        return [[vg.Point(point[0], point[1]) for point in hull] for hull in hulls]
+        if DEBUG:
+            plt.figure()
+            plt.axis('scaled')
+            plt.xlim(0, 100)
+            plt.ylim(0, 100)
+            plt.gca().invert_yaxis()
+            for blob in blobs:
+                plt.plot(*zip(*blob))
+            plt.show()
+        
+        return [[vg.Point(point[0], point[1]) for point in blob] for blob in blobs]
 
     def __update_vg(self):
         if not self.polys:
@@ -149,7 +177,7 @@ class Player:
         if len(self.polys) == 1:
             p = list(self.polys.values())
         else :
-            p = self.__merge_nearby_polys()
+            p = self.__merge_nearby_obstacles()
         self.graph.build(p, self.workers)
 
     def __update_path(self):
@@ -195,7 +223,7 @@ class Player:
             self.path.popleft()
 
         if self.lookup_timer == 0:
-            self.lookup_timer = 9
+            self.lookup_timer = LOOKUP_INTERVAL
 
             return 'lookup'
         

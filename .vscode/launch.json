@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args" : ["-ns", "150", "-nv", "20", "-p", "5", "-sc", "8"]
+            "args" : ["-ns", "150", "-nv", "20", "-p", "5", "-i", "50"]
         }
     ]
 }
