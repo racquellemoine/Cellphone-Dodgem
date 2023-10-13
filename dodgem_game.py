@@ -3,7 +3,6 @@ from tkinter import *
 import time
 import math
 import random
-import fast_tsp
 import os
 import shutil
 import Pmw
@@ -26,7 +25,9 @@ class Stall():
 
 class DodgemGame(tk.Tk):
     def __init__(self, args):
-        # try:
+        if args.disable_tsp == "True" or args.disable_tsp == "true":
+            import fast_tsp
+
         super().__init__()
 
         shutil.rmtree('logs')
@@ -114,7 +115,10 @@ class DodgemGame(tk.Tk):
         self.game_state = "resume"
 
         self._configure_game()
-        self.T, self.tsp_path = self.tsp()
+        if args.disable_tsp == "False" or args.disable_tsp == "false":
+            self.T, self.tsp_path = self.tsp()
+        else:
+            self.T, self.tsp_path = 10000, []
 
         # handle edge case
         if self.T <= 0:
