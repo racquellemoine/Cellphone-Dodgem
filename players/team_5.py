@@ -127,7 +127,8 @@ class Player:
                 polys[o] = self.__build_poly(o)
                 self.need_update = True
 
-    def __merge_nearby_polys(self, centers):
+    def __merge_nearby_polys(self):
+        centers = np.array(list(self.polys.keys()))[:,1:]
         ac = AgglomerativeClustering(n_clusters=None, linkage='single', metric='euclidean', distance_threshold=math.sqrt(32))
         clusters = ac.fit(centers).labels_
         
@@ -148,7 +149,7 @@ class Player:
         if len(self.polys) == 1:
             p = list(self.polys.values())
         else :
-            p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])
+            p = self.__merge_nearby_polys()
         self.graph.build(p, self.workers)
 
     def __update_path(self):
