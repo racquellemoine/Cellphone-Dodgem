@@ -10,12 +10,15 @@ from sklearn.cluster import AgglomerativeClustering
 from scipy.spatial import ConvexHull, Delaunay
 from shapely.geometry import Polygon
 import matplotlib.pyplot as plt
+from .RVO_Py_MAS.RVO import RVO_update, reach, compute_V_des, reach
+
 random.seed(2)
 
 DEBUG = False
 LOOKUP_INTERVAL = 1
-OBSTACLE_HITBOX_SIZE = 2.1
+OBSTACLE_HITBOX_SIZE = 2.2
 STALL_HITBOX_SIZE = 2
+DIST_EPS = 1e-5
 
 class Position():
     def __init__(self, x, y):
@@ -40,7 +43,6 @@ class Player:
 
         self.sign_x = 1
         self.sign_y = 1
-        self.eps = 1e-5
 
         # pathing
         self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
@@ -56,6 +58,15 @@ class Player:
         self.need_update = True
         self.path = deque()
         self.collision = 0
+
+        # RVO 
+        self.ws = {'robot_radius' : 1.0,
+                   'circular_obstacles' : [],
+                   'boundary' : []}
+        self.player_pos = [[0,0] for _ in range(num_players + 1)]
+        self.player_v = [[0,0] for _ in range(num_players + 1)]
+        self.neighbors = set()
+        self.is_alert = False
 
     def __init_queue(self):
         stv = self.stalls_to_visit
@@ -133,12 +144,28 @@ class Player:
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
         polys = self.polys
+        ws = self.ws
 
+        ws['circular_obstacles'].clear
         for o in obstacles:
+            ws['circular_obstacles'].append([o[1], o[2], 1.0])
             if o not in polys:
                 polys[o] = self.__build_poly(o)
                 self.need_update = True
 
+        ppos, pv = self.player_pos, self.player_v
+        self.neighbors.clear()
+        for pid, px, py in other_players:
+            self.neighbors.add(pid)
+            prevx, prevy = ppos[pid]
+            ppos[pid] = [px, py]
+            pv[pid] = [px - prevx, py - prevy] \
+                if self.__calc_distance(px, py, prevx, prevy) <= 1.005 \
+                else [0, 0]
+
+        self.is_alert = (other_players or obstacles)
+
+    """
     def __merge_nearby_obstacles(self):
         obstacle_centers = np.array(list(self.polys.keys()))[:,1:]
         ac = AgglomerativeClustering(n_clusters=None, linkage='single', metric='euclidean', distance_threshold=math.sqrt(2 * (OBSTACLE_HITBOX_SIZE * 2) ** 2))
@@ -170,14 +197,15 @@ class Player:
             plt.show()
         
         return [[vg.Point(point[0], point[1]) for point in blob] for blob in blobs]
+    """
 
     def __update_vg(self):
         if not self.polys:
             return
-        if len(self.polys) == 1:
-            p = list(self.polys.values())
-        else :
-            p = self.__merge_nearby_obstacles()
+        #if len(self.polys) == 1:
+        p = list(self.polys.values())
+        #else :
+        #    p = self.__merge_nearby_obstacles()
         self.graph.build(p, self.workers)
 
     def __update_path(self):
@@ -219,7 +247,7 @@ class Player:
 
         t = self.path[0]
 
-        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < self.eps:
+        if self.__calc_distance(pos_x, pos_y, t.x, t.y) < DIST_EPS:
             self.path.popleft()
 
         if self.lookup_timer == 0:
@@ -250,6 +278,15 @@ class Player:
 
         elif len(self.q) == 0:
             self.vx, self.vy = 0, 0
+
+        if self.is_alert:
+            X = [self.player_pos[pid] for pid in self.neighbors]
+            X.append([self.pos_x, self.pos_y])
+            V = [self.player_v[pid] for pid in self.neighbors]
+            V.append([self.vx, self.vy])
+            V_max = [1.0 for _ in range(len(X))]
+            V_opt = RVO_update(X, V, V, self.ws)
+            self.vx, self.vy = V_opt[-1][0], V_opt[-1][1]
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
