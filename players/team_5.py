@@ -15,8 +15,8 @@ from .RVO_Py_MAS.RVO import RVO_update, reach, compute_V_des, reach
 random.seed(2)
 
 DEBUG = False
-LOOKUP_INTERVAL = 1
-OBSTACLE_HITBOX_SIZE = 2.2
+LOOKUP_INTERVAL = 8
+OBSTACLE_HITBOX_SIZE = 2.1
 STALL_HITBOX_SIZE = 2
 DIST_EPS = 1e-5
 
@@ -26,6 +26,27 @@ class Position():
         self.y = y
 
 class Player:
+    pcount = 0
+    dists = None
+    graph = vg.VisGraph()
+    workers = len(os.sched_getaffinity(0))
+    seen_obs = set()
+    polys = defaultdict(list)
+
+    step_pcount = 0
+
+    # RVO 
+    ws = {'robot_radius' : 0.5,
+           'circular_obstacles' : [],
+           'boundary' : []}
+    player_pos = None 
+    player_v = None
+    V_des = None
+    seen_players = set()
+    friends = set()
+    clear_seen = False
+    update_RVO = False
+
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
         self.id = id
         self.name = name
@@ -44,29 +65,33 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
+        # static var init
+        if not Player.pcount:
+            Player.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
+            Player.player_pos = [[0,0] for _ in range(num_players + 1)]
+            Player.player_v = [[0,0] for _ in range(num_players + 1)]
+            Player.V_des = [[0,0] for _ in range(num_players + 1)]
+            Player.player_pos[0] = [-100, -100]
+
+        Player.pcount += 1
+        Player.friends.add(id)
+
         # pathing
-        self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
         self.q = deque()
         self.__init_tsp()
         self.__init_queue()
     
         # obstacle avoidance
-        self.lookup_timer = 1
-        self.polys = defaultdict(list)
-        self.graph = vg.VisGraph()
-        self.workers = len(os.sched_getaffinity(0))
+        self.lookup_timer = LOOKUP_INTERVAL
         self.need_update = True
         self.path = deque()
         self.collision = 0
 
-        # RVO 
-        self.ws = {'robot_radius' : 1.0,
-                   'circular_obstacles' : [],
-                   'boundary' : []}
-        self.player_pos = [[0,0] for _ in range(num_players + 1)]
-        self.player_v = [[0,0] for _ in range(num_players + 1)]
+        # local avoidance
         self.neighbors = set()
         self.is_alert = False
+
+        self.first_turn = True
 
     def __init_queue(self):
         stv = self.stalls_to_visit
@@ -143,27 +168,35 @@ class Player:
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        polys = self.polys
-        ws = self.ws
+        seen = Player.seen_obs
+        ws = Player.ws
 
-        ws['circular_obstacles'].clear
-        for o in obstacles:
-            ws['circular_obstacles'].append([o[1], o[2], 1.0])
-            if o not in polys:
-                polys[o] = self.__build_poly(o)
-                self.need_update = True
+        for oid, ox, oy in obstacles:
+            if oid not in seen:
+                seen.add(oid)
+                ws['circular_obstacles'].append([ox, oy, 1.0])
+            #if o not in polys:
+            #    polys[o] = self.__build_poly(o)
+            #    self.need_update = True
 
-        ppos, pv = self.player_pos, self.player_v
+        if Player.clear_seen:
+            Player.seen_players.clear()
+            Player.clear_seen = False
+
         self.neighbors.clear()
+        ppos, pv = Player.player_pos, Player.player_v
+        if other_players:
+            self.is_alert = True
         for pid, px, py in other_players:
             self.neighbors.add(pid)
-            prevx, prevy = ppos[pid]
-            ppos[pid] = [px, py]
-            pv[pid] = [px - prevx, py - prevy] \
-                if self.__calc_distance(px, py, prevx, prevy) <= 1.005 \
-                else [0, 0]
-
-        self.is_alert = (other_players or obstacles)
+            if pid not in Player.seen_players and pid not in Player.friends:
+                Player.seen_players.add(pid)
+                prevx, prevy = ppos[pid]
+                ppos[pid] = [px, py]
+                pv[pid] = [px - prevx, py - prevy] \
+                    if self.__calc_distance(px, py, prevx, prevy) <= 1.005 \
+                    else [0, 0]
+                Player.V_des[pid] = pv[pid]
 
     """
     def __merge_nearby_obstacles(self):
@@ -212,11 +245,11 @@ class Player:
         self.path.clear()
         s = vg.Point(self.pos_x, self.pos_y)
         t = vg.Point(self.q[0].x, self.q[0].y)
-        if not self.polys:
+        if not Player.polys:
             new_path = [s, t]
         else:
             try:
-                new_path = self.graph.shortest_path(s, t)
+                new_path = Player.graph.shortest_path(s, t)
             except:
                 new_path = [s, t]
         for p in new_path[1:]:
@@ -224,7 +257,7 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.collision = 15
+        self.collision = 12
         self.lookup_timer = 0
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
@@ -233,15 +266,28 @@ class Player:
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
+        # if first instance of team 5 player
+        if Player.step_pcount == Player.pcount:
+            Player.step_pcount = 0
+            Player.clear_seen = True
+
+        Player.step_pcount += 1
+
+        # if last instance of team 5 player
+        if Player.step_pcount == Player.pcount:
+            Player.update_RVO = True
+
         # return 'lookup' or 'move'
         self.pos_x = pos_x
         self.pos_y = pos_y
+
+        Player.player_pos[self.id] = [pos_x, pos_y]
 
         if len(self.q) == 0:
             return 'move'
 
         if self.need_update:
-            self.__update_vg()
+            #self.__update_vg()
             self.__update_path()
             self.need_update = False
 
@@ -251,9 +297,10 @@ class Player:
             self.path.popleft()
 
         if self.lookup_timer == 0:
-            self.lookup_timer = LOOKUP_INTERVAL
+            self.lookup_timer = 1 if self.is_alert else LOOKUP_INTERVAL
+            self.is_alert = False
 
-            return 'lookup'
+            return 'lookup move'
         
         self.lookup_timer -= 1
         
@@ -273,20 +320,36 @@ class Player:
             vy = t.y - self.pos_y
             self.sign_x = 1
             self.sign_y = 1
-            
-            self.vx, self.vy = self.__normalize(vx, vy) if self.__calc_distance(vx, vy, 0, 0) > 1 else (vx, vy)
+            self.vx, self.vy = list(self.__normalize(vx, vy)) \
+                                if self.__calc_distance(vx, vy, 0, 0) > 1 \
+                                else [vx, vy] 
+            Player.V_des[self.id] = [self.vx, self.vy]
 
         elif len(self.q) == 0:
             self.vx, self.vy = 0, 0
 
-        if self.is_alert:
-            X = [self.player_pos[pid] for pid in self.neighbors]
-            X.append([self.pos_x, self.pos_y])
-            V = [self.player_v[pid] for pid in self.neighbors]
-            V.append([self.vx, self.vy])
-            V_max = [1.0 for _ in range(len(X))]
-            V_opt = RVO_update(X, V, V, self.ws)
-            self.vx, self.vy = V_opt[-1][0], V_opt[-1][1]
+        if Player.update_RVO:
+            #X = [Player.player_pos[pid] for pid in self.neighbors]
+            #X.append([self.pos_x, self.pos_y])
+            #V = [Player.player_v[pid] for pid in self.neighbors]
+            #V.append([self.vx, self.vy])
+            Player.player_v = RVO_update(Player.player_pos, 
+                                         Player.V_des, 
+                                         Player.player_v, 
+                                         self.ws)
+            # extrapolate current pos of unknown players by last seen vector
+            for pid in range(self.num_players):
+                if pid not in Player.seen_players and pid not in Player.friends:
+                    px, py = Player.player_v[pid]
+                    Player.player_pos[pid][0] += px
+                    Player.player_pos[pid][1] += py
+
+            Player.update_RVO = False
+
+        if not self.first_turn and len(self.q) > 0 and not self.collision:
+            self.vx, self.vy = Player.player_v[self.id]
+
+        self.first_turn = False
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
