@@ -31,7 +31,7 @@ class Vector:
     
     def __distance(self, other):
         """Euclidean distance"""
-        return math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
+        return math.sqrt(((self.x - other.x) ** 2) + ((self.y - other.y) ** 2))
     
     def __str__(self):
         """Human-readable string representation of the vector."""
@@ -198,7 +198,7 @@ class Player:
                 if (curr.x, curr.y) not in explored:
                     explored.append((curr.x, curr.y))
                     # return path 
-                    if curr.dist2(nextStall) < 3 or curr.dist >= 10:
+                    if curr.dist2(nextStall) < 3 or curr.dist >= 7:
                         return self.get_astar_path(curr)
                     for child_vector in self.aStar_expand(curr, nextStall):
                         if (child_vector.x, child_vector.y) not in explored:
@@ -206,35 +206,35 @@ class Player:
 
         return []
 
-    #returns a list of vectors, rotating the current vector by 15 degrees left and right
-    #this represents 12 different directions from the current vector in a 180 degree area
+    #returns a list of vectors, rotating the current vector by 22.5 degrees left and right
+    #this represents 8 different directions from the current vector in a 180 degree area
     def aStar_expand(self, vector, stall):
-        rotate = 15 
+        rotate = 0
         newVectors = []
-        for i in range(0, 6):
+        for i in range(0, 4):
             addVector = True
             newX = (vector.x * math.cos(math.radians(rotate))) - (vector.y * math.sin(math.radians(rotate)))
             newY = (vector.x * math.sin(math.radians(rotate))) + (vector.y * math.cos(math.radians(rotate)))
-            newVector =  Vector(newX, newY, vector, stall, vector.dist + 1)
+            newVector =  Vector(newX+vector.x, newY+vector.y, vector, stall, vector.dist + 1)
             for obstacle in self.obstacles_known:
-                if newVector.dist2(obstacle) < DANGER_ZONE+2.3:
+                if newVector.dist2(obstacle) < DANGER_ZONE+1:       #for some reason, it is still adding vectors that collide with the obstacle
                     addVector = False
             if addVector:
                 newVectors.append(newVector)
-            rotate += 15
+            rotate += 22.5
         
-        rotate = -15
-        for i in range(0, 6):
+        rotate = 0
+        for i in range(0, 4):
             addVector = True
             newX = (vector.x * math.cos(math.radians(rotate))) - (vector.y * math.sin(math.radians(rotate)))
             newY = (vector.x * math.sin(math.radians(rotate))) + (vector.y * math.cos(math.radians(rotate)))
-            newVector =  Vector(newX, newY, vector, stall, vector.dist + 1)
+            newVector =  Vector(newX+vector.x, newY+vector.y, vector, stall, vector.dist + 1)
             for obstacle in self.obstacles_known:
-                if newVector.dist2(obstacle) < DANGER_ZONE+2.3:
+                if newVector.dist2(obstacle) < DANGER_ZONE+1:     #for some reason, it is still adding vectors that collide with the obstacle
                     addVector = False
             if addVector:
                 newVectors.append(newVector)
-            rotate -= 15
+            rotate -= 22.5
         
         return newVectors
     
