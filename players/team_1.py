@@ -54,6 +54,7 @@ class Player:
         self.WIN_RADIUS = 2 # temp, but bc stall is 2x2 and we have 1m border around
         self.LOOKUP_RADIUS = 10
         self.start_node = self.pos_x, self.pos_y
+
         self.goal_stall = None
         self.is_rrt_planning = False
         self.rrt_path = []
@@ -120,7 +121,7 @@ class Player:
                 self.goal_stall = self.stalls_to_visit.pop(2)
             else:
                 self.goal_stall = self.stalls_to_visit.pop(0)
-        
+
         self.field_vision = []
 
         return
@@ -177,7 +178,7 @@ class Player:
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-    #########################################################
+     #########################################################
     #                  From dodgem_game.py                  #
     #########################################################
 
@@ -451,6 +452,7 @@ class Player:
                 if self._check_collision_obstacle(p, new_point):
                     self.field_vision.append(p)
                     return False
+
 
         return True
 
