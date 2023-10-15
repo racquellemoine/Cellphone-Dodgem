@@ -41,6 +41,7 @@ class Player:
         
         self.obstacles_list = []
         self.other_players_list = []
+        self.field_vision = []
         self.goal_stall = None
 
         XDIM = constants.vis_height
@@ -79,6 +80,18 @@ class Player:
     def pass_lookup_info(self, other_players, obstacles):
         self.obstacles_list.append(other_players)
         self.other_players_list.append(other_players)
+        return
+
+    def emergency_exit(self):
+
+        if len(self.field_vision) >= 7:
+            self.stalls_to_visit.append(self.goal_stall)
+            if len(self.stalls_to_visit) > 3:
+                self.goal_stall = self.stalls_to_visit.pop(2)
+            else:
+                self.goal_stall = self.stalls_to_visit.pop(0)
+        self.field_vision = []
+
         return
 
     # simulator calls this function when the player encounters an obstacle
@@ -329,10 +342,12 @@ class Player:
 
         for o in obstacles:
             if self._check_collision_obstacle(o, new_point):
+                self.field_vision.append(o)
                 return False
 
         for p in other_players:
             if self._check_collision_obstacle(p, new_point):
+                self.field_vision.append(p)
                 return False
 
         return True
