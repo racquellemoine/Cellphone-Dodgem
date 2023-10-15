@@ -45,6 +45,7 @@ class Player:
         
         self.obstacles_list = []
         self.other_players_list = []
+        self.field_vision = []
 
         self.XDIM = 100  # constants.vis_height
         self.YDIM = 100  # constants.vis_width
@@ -109,6 +110,19 @@ class Player:
         # need to do something with how we only want to record if people are around us
         # otherwise, it doesn't matter, we should pop them out.
         self.other_players_list.append(other_players)
+        return
+
+    def emergency_exit(self):
+
+        if len(self.field_vision) >= 7:
+            self.stalls_to_visit.append(self.goal_stall)
+            if len(self.stalls_to_visit) > 3:
+                self.goal_stall = self.stalls_to_visit.pop(2)
+            else:
+                self.goal_stall = self.stalls_to_visit.pop(0)
+        
+        self.field_vision = []
+
         return
 
     # simulator calls this function when the player encounters an obstacle
@@ -429,11 +443,13 @@ class Player:
             if len(o) > 0:
                 x, y = o[1], o[2]
                 if self._check_collision_obstacle((x, y), new_point):
+                    self.field_vision.append(o)
                     return False
 
         for p in other_players:
             if len(p) > 0:
                 if self._check_collision_obstacle(p, new_point):
+                    self.field_vision.append(p)
                     return False
 
         return True
@@ -506,6 +522,7 @@ class Player:
         if len(self.queue) > 0:
             #don't pop until we collect it!
             self.goal_stall = self.queue[0]
+            self.emergency_exit()
 
 
     #########################################################
