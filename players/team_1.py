@@ -272,7 +272,7 @@ class Player:
     #                   RRT Implementation                  #
     #########################################################
 
-    def _win_condition(self, new_node, goal_stall):
+    def _win_condition(self, new_node, goal_point):
         """
         Check if the new_node is within WIN_RADIUS of the goal_stall
 
@@ -284,7 +284,7 @@ class Player:
             Bool - True if new_node is within WIN_RADIUS of goal_stall, False otherwise
         """
 
-        if math.dist(new_node, (goal_stall.x, goal_stall.y)) <= self.WIN_RADIUS:
+        if math.dist(new_node, (goal_point[0], goal_point[1])) <= self.WIN_RADIUS:
             return True
         return False
 
@@ -454,7 +454,7 @@ class Player:
 
         return True
 
-    def rrt(self, goal_stall, obstacles, other_players):
+    def rrt(self, goal_point, obstacles, other_players):
         nodes = []
         parents = {}
         nodes.append(self.start_node)
@@ -466,7 +466,7 @@ class Player:
         begin = datetime.utcnow()
         while datetime.utcnow() - begin < self.max_time:
 
-            new_point = self._get_new_point(self.XDIM, self.YDIM, goal_stall)
+            new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
             print(f'getting new point {new_point}')
 
             if self._is_collision_free(obstacles, other_players, new_point):
@@ -484,9 +484,9 @@ class Player:
                     nodes.append(new_node)
                     parents[new_node] = closest_node
 
-                    print(f'extended. parents {parents}')
+                    # print(f'extended. parents {parents}')
 
-                    if self._win_condition(new_node, goal_stall):
+                    if self._win_condition(new_node, goal_point):
 
                         print("RRT win condition reached")
 
@@ -506,7 +506,7 @@ class Player:
 
             iter_count += 1
 
-        print(f'iter {iter_count}')
+        # print(f'iter {iter_count}')
 
         return rrt_path
 
@@ -540,6 +540,7 @@ class Player:
             self._get_next_tsp_node()
             # self.goal_stall = self.queue.popleft() # so should i NOT remove it in encounter obstacle?
             # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
+
 
         if self.goal_stall:
 
