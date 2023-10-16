@@ -23,7 +23,7 @@ class Player:
 
         self.sign_x = 1
         self.sign_y = 1
-        self.obstacles_loc = []
+        self.obstacles_loc = set()
         self.original_pos_x = initial_pos_x
         self.original_pos_y = initial_pos_y
 
@@ -44,8 +44,8 @@ class Player:
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
-        print("eye dee", stall_id)
-        print(self.path_to_follow)
+        # print("eye dee", stall_id)
+        # print(self.path_to_follow)
 
         for i in range(len(self.path_to_follow)):
             posx, posy, eyedee, _ = self.path_to_follow[i]
@@ -107,7 +107,7 @@ class Player:
 
     def pass_lookup_info(self, other_players, obstacles):
 
-        print("In pass_lookup_info function.")
+        # print("In pass_lookup_info function.")
         # update the information to the self.discovered_region variable
 
         # Imp note - since this is a small version put together in less time, I'll just assume our vision is 10x10 square as opposed to the 10 unit radius for us to see.
@@ -119,8 +119,8 @@ class Player:
                 self.discovered_region[int(curr_x)][int(curr_y)] = 1
 
         for obstacle in obstacles:
-            print('obstacle:', obstacle)
-            self.obstacles_loc.append((obstacle[1], obstacle[2]))
+            # print('obstacle:', obstacle)
+            self.obstacles_loc.add((obstacle[1], obstacle[2], obstacle[0]))
             self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
     # simulator calls this function when the player encounters an obstacle
@@ -129,34 +129,9 @@ class Player:
         # assumption is that we have already looked around and added our obstacles to the path
         # if self.pos_x
 
-        self.obstacles_loc.append((self.pos_x, self.pos_y))
+        # self.obstacles_loc.append((self.pos_x, self.pos_y))
         self.just_collided += 1
         self.collision_turn = self.turn_counter
-
-        def generate_deltas():
-            delta_x = random.choice([-1, 1])
-            delta_y = random.choice([-1, 1])
-
-            delta_x += self.pos_x
-            delta_y += self.pos_y
-
-            return delta_x, delta_y
-
-        delta_x, delta_y = generate_deltas()
-
-        while (delta_x, delta_y) in self.obstacles_loc:
-            delta_x, delta_y = generate_deltas()
-
-        angle = math.atan(numpy.abs(delta_y)/numpy.abs(delta_x))
-        delta_vy = math.sin(angle)
-        delta_vx = math.cos(angle)
-
-        if (self.pos_x, self.pos_y) in self.obstacles_loc:
-            # if true, then we must move and reroute tsp after doing some exploration
-            return delta_vx, delta_vy, True
-        else:
-            # if false, then there is a chance that we ran into a player and we may not need to reroute tsp
-            return delta_vx, delta_vy, False
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
 
@@ -167,12 +142,9 @@ class Player:
 
         self.pos_x = pos_x
         self.pos_y = pos_y
-        print(f"In get_action function, <pos_x, pos_y>: <{pos_x}, {pos_y}>")
-        print(self.turn_counter)
 
         # a function that checkes if the current position is near an undiscovered region.
         def should_lookup():
-            print("should look up func.")
             # all possible 8 directions to move from the current position
             _x = [0, 1, 1,  1,  0, -1, -1, -1]
             _y = [1, 1, 0, -1, -1, -1,  0,  1]
@@ -183,7 +155,7 @@ class Player:
                 curr_y = max(min(pos_y + y_move, 99), 0)
 
                 if self.discovered_region[int(curr_x)][int(curr_y)] == -1:
-                    print(f"undiscovered location <{curr_x}, {curr_y}> found.")
+                    # print(f"undiscovered location <{curr_x}, {curr_y}> found.")
                     return True  # i.e. we should look up
 
             # otherwise, don't look up
@@ -192,19 +164,18 @@ class Player:
         # check if the current position
         # a) is not discovered yet
         if self.discovered_region[int(pos_x)][int(pos_y)] == -1:
-            print(self.turn_counter, 'Lookup')
             return 'lookup'
 
         # b) within the already discovered region, but about to go to an undiscovered region (+- 1 units)
         elif should_lookup():
-            print(self.turn_counter, 'Lookup')
             return 'lookup'
         # otherwise move
         if len(self.path_to_follow) == 0:
-            print(self.turn_counter, 'move (finished)')
             return 'move'
 
-        print(self.turn_counter, 'move')
+        if self.turn_counter % 10 == 0:
+            return 'lookup'
+
         return 'move'
 
     # simulator calls this function to get the next move from the player
@@ -213,7 +184,99 @@ class Player:
         if not self.path_to_follow or len(self.path_to_follow) == 0:
             return self.pos_x, self.pos_y  # No stalls to visit
 
-        if self.turn_counter - self.collision_turn <= 11:
+        def check_collision_obstacle(stall_x, stall_y, p_x, p_y, new_p_x, new_p_y):
+            def intersection(a, b, c, d, e, f, g, h):
+                s0 = [(a, b), (c, d)]
+                s1 = [(e, f), (g, h)]
+                dx0 = s0[1][0]-s0[0][0]
+                dx1 = s1[1][0]-s1[0][0]
+                dy0 = s0[1][1]-s0[0][1]
+                dy1 = s1[1][1]-s1[0][1]
+                p0 = dy1*(s1[1][0]-s0[0][0]) - dx1*(s1[1][1]-s0[0][1])
+                p1 = dy1*(s1[1][0]-s0[1][0]) - dx1*(s1[1][1]-s0[1][1])
+                p2 = dy0*(s0[1][0]-s1[0][0]) - dx0*(s0[1][1]-s1[0][1])
+                p3 = dy0*(s0[1][0]-s1[1][0]) - dx0*(s0[1][1]-s1[1][1])
+                return (p0*p1 <= 0) & (p2*p3 <= 0)
+
+            def check_collision(x1, y1, new_x1, new_y1, x2, y2, new_x2, new_y2):
+                def distance(x, y, new_x, new_y):
+                    dx = new_x - x
+                    dy = new_y - y
+                    return dx, dy
+
+                def dot_product(dx1, dy1, dx2, dy2):
+                    return dx1 * dx2 + dy1 * dy2
+
+                dx1, dy1 = distance(x1, y1, new_x1, new_y1)
+                dx2, dy2 = distance(x2, y2, new_x2, new_y2)
+
+                A = dot_product(dx1, dx1, dx2, dx2) + dot_product(dy1,
+                                                                  dy1, dy2, dy2) - 2 * dot_product(dx1, dx2, dy1, dy2)
+                B = 2 * (x1 * dx1 - x2 * dx1 - x1 * dx2 + x2 * dx2 +
+                         y1 * dy1 - y2 * dy1 - y1 * dy2 + y2 * dy2)
+                C = x1 * x1 + x2 * x2 + y1 * y1 + y2 * y2 - 2 * x1 * x2 - 2 * y1 * y2 - 0.25
+
+                D = B * B - 4 * A * C
+
+                if A == 0:
+                    if B == 0:
+                        return C == 0
+                    root = (-C) / B
+                    return 0 <= root <= 1
+
+                if D < 0:
+                    return False
+
+                if D == 0:
+                    root = (-B) / (2 * A)
+                    return 0 <= root <= 1
+
+                if D > 0:
+                    root1 = (-B + math.sqrt(D)) / (2 * A)
+                    root2 = (-B - math.sqrt(D)) / (2 * A)
+
+                    return (0 <= root1 <= 1) or (0 <= root2 <= 1)
+
+                return False
+
+            corners = [
+                (stall_x - 1, stall_y - 1),
+                (stall_x + 1, stall_y - 1),
+                (stall_x + 1, stall_y + 1),
+                (stall_x - 1, stall_y + 1)
+            ]
+
+            for (x1, y1), (x2, y2) in zip(corners, corners[1:] + [corners[0]]):
+                if intersection(x1, y1 - 0.5, x2, y2 - 0.5, p_x, p_y, new_p_x, new_p_y):
+                    return True
+                if check_collision(x1, y1, x1, y1, p_x, p_y, new_p_x, new_p_y):
+                    return True
+
+            return False
+
+        def will_collide(new_x, new_y):
+            print("will collide called")
+
+            print("AVOID", end="")
+            for x in list(self.obstacles_loc):
+                print(x, end="")
+            print("\n")
+
+            radius = 1
+            # Make a copy of the obstacles set
+            obstacles_copy = set(self.obstacles_loc)
+            for x, y, n in list(obstacles_copy):
+                if check_collision_obstacle(x, y, self.pos_x, self.pos_y, new_x, new_y):
+                    return True
+                # distance = math.sqrt(((new_x - x) ** 2 + (new_y - y) ** 2))
+                # if distance <= radius:
+                #     print(n, "collide called on n!")
+                #     return True
+
+            return False
+
+        def gen_rand_point():
+
             # Generate random velocity components
             random_angle = random.uniform(0, 2 * math.pi)
             self.vx = math.cos(random_angle)
@@ -236,6 +299,10 @@ class Player:
 
             return new_pos_x, new_pos_y
 
+        if self.turn_counter - self.collision_turn <= 11:
+
+            new_pos_x, new_pos_y = gen_rand_point()
+
         else:
             next_stall = self.path_to_follow[0]
             target_x, target_y = next_stall[0], next_stall[1]
@@ -245,7 +312,7 @@ class Player:
             distance_to_target = math.sqrt(dx**2 + dy**2)
 
             # Check for nearby obstacles and other players
-            for obstacle_x, obstacle_y in self.obstacles_loc:
+            for obstacle_x, obstacle_y, _ in list(self.obstacles_loc):
                 obstacle_distance = math.sqrt(
                     (obstacle_x - self.pos_x)**2 + (obstacle_y - self.pos_y)**2)
                 if obstacle_distance < 0.5:
@@ -278,4 +345,8 @@ class Player:
             new_pos_x = max(min(new_pos_x, 100), 0)
             new_pos_y = max(min(new_pos_y, 100), 0)
 
-            return new_pos_x, new_pos_y
+        if len(list(self.obstacles_loc)) != 0:
+            while will_collide(new_pos_x, new_pos_y):
+                new_pos_x, new_pos_y = gen_rand_point()
+
+        return new_pos_x, new_pos_y
