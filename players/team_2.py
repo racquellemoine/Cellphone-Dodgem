@@ -1,6 +1,7 @@
 import math
 import random
 import numpy
+import fast_tsp
 random.seed(2)
 
 
