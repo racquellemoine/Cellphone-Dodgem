@@ -295,7 +295,11 @@ class Player:
         self.players_cached = [Vector(p[1],p[2]) for p in other_players]
 
         # update obstacles
-        self.obstacles_known = [Vector(o[1],o[2]) for o in obstacles]
+        for o in obstacles:
+            ob = Vector(o[1],o[2])
+            if ob not in self.obstacles_known:
+                self.obstacles_known.append(ob)
+        # print(self.obstacles_known)
 
     def __avoid_players(self):
         for player in self.players_cached:
@@ -304,6 +308,8 @@ class Player:
                 break
 
     def __avoid_obstacles(self):
+        # print(self.obstacles_known)
+        # print(len(self.obstacles_known))
         for obstacle in self.obstacles_known:
             if self.pos.dist2(obstacle) < DANGER_ZONE+8:
                 #self.dir = self.pos.normalized_dir(obstacle).left_90()
@@ -318,7 +324,7 @@ class Player:
         self.prev_pos.update_val(self.pos)
         
         self.should_lookup = True
-        print("encountered obstacle")
+        # print("encountered obstacle")
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
@@ -342,12 +348,14 @@ class Player:
             #     self.avoid_players()
 
         # if self.t_since_lkp>=HORIZON/2:
-        if self.pos_last_lkp.dist2(self.pos) > 3 or self.should_lookup:
+        if self.pos_last_lkp.dist2(self.pos) > 5 or self.should_lookup:
             self.pos_last_lkp.update_val(self.pos)
             # self.should_lookup = False
             # self.times_lkp += 1
             self.__update_tsp()
+            # self.__avoid_obstacles()
             self.dir = self.pos.normalized_dir(self.__next_stall())
+            self.__avoid_obstacles()
             return 'lookup move'
         
         # if self.times_lkp == 2:
