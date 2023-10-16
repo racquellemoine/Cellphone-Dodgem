@@ -6,6 +6,7 @@ import random
 import os
 import shutil
 import Pmw
+import fast_tsp
 
 import constants
 from players.default_player import Player as DefaultPlayer

@@ -229,7 +229,7 @@ class Player:
             if newVector.y > 99 or newVector.y < 1:
                 continue
             for obstacle in self.obstacles_known:
-                if newVector.dist2(obstacle) < DANGER_ZONE+1.5:   
+                if newVector.dist2(obstacle) < DANGER_ZONE+2:   
                     addVector = False
             if addVector:
                 newVectors.append(newVector)
@@ -324,7 +324,7 @@ class Player:
         self.prev_pos.update_val(self.pos)
         
         self.should_lookup = True
-        # print("encountered obstacle")
+        print("encountered obstacle")
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
@@ -348,14 +348,14 @@ class Player:
             #     self.avoid_players()
 
         # if self.t_since_lkp>=HORIZON/2:
-        if self.pos_last_lkp.dist2(self.pos) > 5 or self.should_lookup:
+        if self.pos_last_lkp.dist2(self.pos) > 3.5 or self.should_lookup:
             self.pos_last_lkp.update_val(self.pos)
-            # self.should_lookup = False
+            self.should_lookup = False
             # self.times_lkp += 1
-            self.__update_tsp()
-            # self.__avoid_obstacles()
-            self.dir = self.pos.normalized_dir(self.__next_stall())
             self.__avoid_obstacles()
+            # self.__update_tsp()
+            self.dir = self.pos.normalized_dir(self.__next_stall())
+            # self.__avoid_obstacles()
             return 'lookup move'
         
         # if self.times_lkp == 2:
