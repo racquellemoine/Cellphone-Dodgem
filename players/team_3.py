@@ -25,43 +25,79 @@ class Player:
         self.leftLimit = 0 
         self.upperLimit = 0 
         self.lowerLimit = 100
-        self.walkingDirection = "right"
 
-        #queue of next steps to move around obstacle or away from wall
         self.queue = []
+
+        self.lookup_counter = 0 #start by looking up 
+
+        #initialize an empty board-> with 1's
+        self.playing_field = [[2 for i in range(100)] for j in range(100)]
+        self.time_since_last_lookup = 0 # need to figure out how to best keep track of this guy 
+        self.obstacle_movement_queue = []
+        self.tsp_queue = []
+        #r,c represents x,y coordinates
+        #2 indicates unexplored
+        #3 indicates explored bt unvisiited stall
+        #1 indicates visited stall
+        #0 indicates space explored - (not a stall or obstacle)
+        #-1 indicates an obstacle 
+
+
         #keep track of current walking direction 
         #we want to walk counter clockwise
         print("starting at: ", self.pos_x, self.pos_y) 
         if self.pos_x == self.rightLimit: 
-            self.queue = ["left"]*10
-            print("starting walking up")
-            self.walkingDirection = "up"
+            print("starting on right limit")
+            self.walkingDirection = "back track left"
         if self.pos_y == self.upperLimit: 
-            self.queue = ["down"]*10
-            print("starting walking left")
-            self.walkingDirection = "left"
+            print("starting on upper limit")
+            self.walkingDirection = "back track down"
         if self.pos_x == self.leftLimit:
-            self.queue = ["right"]*10
-            print("starting walking down")
-            self.walkingDirection = "down"
+            print("starting on left limit")
+            self.walkingDirection = "back track right"
         if self.pos_y == self.lowerLimit: 
-            self.queue = ["up"]*10
-            print("starting walking right")
+            print("starting on lower limit")
+            self.walkingDirection = "back track up"
+        else:
             self.walkingDirection = "right"
-        print("queue: ", self.queue)
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
+        #remove stall_id from stalls_to_visit 
+        if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
         #remove stall_id from stalls_to_visit 
         if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        pass
+        #given where an obstacle is, can dictate movements 
+        #given coordinates of obstacles and other players 
+
+        #for obstacles, update their positions to be -1 
+        #format of obstacles? 
+        for o in obstacles: 
+            x_pos,y_pos = int(o[1]), int(o[2])
+            self.playing_field[x_pos][y_pos] = -1 
+
+
+    def detect_obstacle(self,x_range,y_range): #add a queue of movements to perform 
+        '''for x in x_range:
+            for y in y_range:
+                self.playing_field[x][y] = -1 '''
+        #so the spots have been identified, now perform movement directions 
+        if self.walkingDirection == "right":
+            self.obstacle_movement_queue = ["down","down","right","right","up","up","right","right"]
+        if self.walkingDirection == "left":
+            self.obstacle_movement_queue = ["up","up","left","left","down","down","left","left"]
+        if self.walkingDirection == "up":
+            self.obstacle_movement_queue = ["right","right","up","up","left","left","up","up"]   
+        if self.walkingDirection == "down":
+            self.obstacle_movement_queue = ["left","left","down","down","right","right","down","down"]
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
+        self.playing_field[self.pos_x][self.pos_y] = -1 #butn need a way to tell if it is a player? 
         #self.vx = random.random()
         #self.vy = math.sqrt(1 - self.vx**2)
         #self.sign_x *= -1
@@ -74,10 +110,6 @@ class Player:
             print("switching down")
             #self.walkingDirection = "back"
             self.walkingDirection = "down"
-            #self.pos_x = self.pos_x
-            #self.pos_y = self.pos_x -1
-            #print("entering if statement")
-            #self.get_next_move()
             return self.pos_x, self.pos_y
         if self.walkingDirection == "down":
             #self.walkingDirection = "left"
@@ -111,7 +143,19 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
         
+        if self.pos_x <= 1 or self.pos_x >= 99:
+            return 'move'
+        if self.pos_y <= 1 or self.pos_y >= 99:
+            return 'move'
+        
+        if self.lookup_counter == 0:
+            self.lookup_counter = 10
+            return 'lookup'
+        self.lookup_counter -= 1 #subtract one 
+    
         return 'move'
+
+        #when do we want to lookup 
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
@@ -228,4 +272,3 @@ class Player:
         if self.pos_x == self.rightLimit-9: 
             self.walkingDirection = "up"
         return self.pos_x-1, self.pos_y
-    
