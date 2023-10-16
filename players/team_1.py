@@ -77,7 +77,7 @@ class Player:
                 self.distance_grid[i + 1][j + 1] = math.ceil(distance2)
 
         self.tsp_path = fast_tsp.find_tour(self.distance_grid)
-        print("THIS IS THE PATH", self.tsp_path)
+        # print("THIS IS THE PATH", self.tsp_path)
 
     def collect_item(self, stall_id):
         if stall_id == self.queue[0].id:
@@ -90,11 +90,28 @@ class Player:
         #         self.queue.remove(stall)
         #         self.goal_stall = None
         #         break
-    def end_game_tactic(self):
-        self.get_action(-10000,-10000)
-    # simulator calls this function when it passes the lookup information
-    # this function is called if the player returns 'lookup' as the action in the get_action function
+
+    def _update_players_list(self):
+        """
+        Update the list of players to remove any player more than LOOKUP_RADIUS m away from us
+
+        self.other_players_list contains a list of tuples for each player, i.e. (ID, x, y)
+        """
+        for player in self.other_players_list:
+            if math.dist((self.pos_x, self.pos_y), (player[1], player[2])) > self.LOOKUP_RADIUS:
+                self.other_players_list.remove(player)
+
+
     def pass_lookup_info(self, other_players, obstacles):
+        """
+        Simulator calls this function when it passes the lookup information.
+        This function is called if the player returns 'lookup' as the action in the get_action function
+
+        Args:
+            other_players - list of other players' current position tuples (ID, x,y)
+            obstacles - list of obstacle tuples (ID, x,y) in the game we know
+
+        """
         for obstacle in obstacles:
             # print(f'adding obstacle to list {obstacle}')
             if obstacle not in self.obstacles_list:
@@ -102,7 +119,25 @@ class Player:
 
         # need to do something with how we only want to record if people are around us
         # otherwise, it doesn't matter, we should pop them out.
-        self.other_players_list.append(other_players)
+
+        # call to update the list of players
+        self._update_players_list()
+
+        #if the player ID matches one of the IDs in other_players_list, remove it and add the new once
+        for player in other_players:
+            # print("WHERE R U PLAYER", player)
+            self.other_players_list.append(player)
+            # for added_players in self.other_players_list:
+            #     if player[0] == added_players[0]:
+            #         print(f'PLAYER in LIST {player[0]}')
+            #         self.other_players_list.remove(added_players)
+            #         self.other_players_list.append(player)
+            #         break
+            #     #if not already in the list
+            #     else:
+            #         print(f'OTHER PLAYER {player[0]}')
+            #         self.other_players_list.append(player)
+
         return
 
     def emergency_exit(self):
@@ -126,15 +161,16 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        print('Encountered obstacle')
+        # print('Encountered obstacle')
         self.collided = True
 
-        # vx = self.goal_stall.x - self.pos_x
-        # vy = self.goal_stall.y - self.pos_y
-        #
-        # self.vx, self.vy = self._normalize(vx, vy)
+        self.vx = random.random()
+        self.vy = math.sqrt(1 - self.vx ** 2)
         self.sign_x *= -1
         self.sign_y *= -1
+
+        # self.sign_x *= -1
+        # self.sign_y *= -1
 
 
     # simulator calls this function to get the action 'lookup', 'move', or 'lookup move' from the player
@@ -158,6 +194,13 @@ class Player:
         return vx / norm, vy / norm
 
     def _bounce_off_boundaries(self, x, y):
+
+        # if x < 0 or x > 100:
+        #     self.sign_x *= -1 # Reverse the x-velocity when hitting the horizontal boundaries
+        #
+        # if y < 0 or y > 100:
+        #     self.sign_y *= -1  # Reverse the y-velocity when hitting the vertical boundaries
+
         if x <= 0:
             self.sign_x = 1
             self.vx = random.random()
@@ -238,6 +281,8 @@ class Player:
         return False
 
     def _check_collision_obstacle(self, obstacle, new_point):
+        # print(f'CHECK obstacle {obstacle} new point {new_point}')
+
         obstacle_x, obstacle_y = obstacle
         p_x, p_y = self.pos_x, self.pos_y
         new_p_x, new_p_y = new_point
@@ -383,8 +428,8 @@ class Player:
         If there are no obstacles/players we detected, then we are collision free.
 
         Args:
-            obstacles - list of obstacles (x,y) in the game we know
-            other_players - list of other players' current position (x,y)
+            obstacles - list of obstacle tuples (ID, x,y) in the game we know
+            other_players - list of other players' current position tuples (ID, x,y)
             new_point - the point we are checking for collision
 
         Returns:
@@ -392,6 +437,11 @@ class Player:
         """
 
         # print(f'obs {obstacles} players {other_players} new point {new_point}')
+
+        # Point is outside the grid boundaries
+        # new_x, new_y = new_point
+        # if new_x < 0 or new_x > self.XDIM or new_y < 0 or new_y > self.YDIM:
+        #     return False
 
         for o in obstacles:
             if len(o) > 0:
@@ -402,7 +452,8 @@ class Player:
 
         for p in other_players:
             if len(p) > 0:
-                if self._check_collision_obstacle(p, new_point):
+                x, y = p[1], p[2]
+                if self._check_collision_obstacle((x, y), new_point):
                     self.field_vision.append(p)
                     return False
 
@@ -422,7 +473,7 @@ class Player:
         while datetime.utcnow() - begin < self.max_time:
 
             new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
-            print(f'getting new point {new_point}')
+            # print(f'getting new point {new_point}')
 
             if self._is_collision_free(obstacles, other_players, new_point):
 
@@ -443,7 +494,7 @@ class Player:
 
                     if self._win_condition(new_node, goal_point):
 
-                        print("RRT win condition reached")
+                        # print("RRT win condition reached")
 
                         # backtrack to get path
                         curr_node = new_node
@@ -518,10 +569,10 @@ class Player:
 
                 # print(f'Moving to {new_pos_x}, {new_pos_y}')
 
-                print("No obstacles in the way, moving directly to goal stall")
+                # print("No obstacles in the way, moving directly to goal stall")
                 return new_pos_x, new_pos_y
             else:
-                print("Obstacle detected, planning with RRT")
+                # print("Obstacle detected, planning with RRT")
 
                 self.rrt_tree = [self.start_node]  # Initialize the RRT tree with the start node
 
@@ -537,15 +588,15 @@ class Player:
                 new_node = self._extend(closest_node, new_point, self.DELTA)
 
                 if self._is_collision_free(self.obstacles_list, self.other_players_list, new_node):
-                    print(f'extending to new node {new_node}')
-                    print(f'DISTANCE CURR-NEW NODE {math.dist(self.start_node, new_node)}')
+                    # print(f'extending to new node {new_node}')
+                    # print(f'DISTANCE CURR-NEW NODE {math.dist(self.start_node, new_node)}')
                     self.rrt_tree.append(new_node)
                     # self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
                     new_pos_x, new_pos_y = new_node
                     return new_pos_x, new_pos_y
                 else:
-                    print("Collision detected while extending RRT tree")
+                    # print("Collision detected while extending RRT tree")
 
                     return self.pos_x, self.pos_y
 
