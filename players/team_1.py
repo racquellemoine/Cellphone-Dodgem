@@ -84,12 +84,12 @@ class Player:
             self.queue.popleft()
             self.goal_stall = None
 
-        # for stall in self.queue:
-        #     if stall.id == stall_id:
-        #         print("Stall id: ", stall.id)
-        #         self.queue.remove(stall)
-        #         self.goal_stall = None
-        #         break
+        for stall in self.queue:
+            if stall.id == stall_id:
+                # print("Stall id: ", stall.id)
+                self.queue.remove(stall)
+                self.goal_stall = None
+                break
 
     def _update_players_list(self):
         """
@@ -145,14 +145,13 @@ class Player:
         if len(self.queue) <= 2:
             return
 
-        print("Emergency exit called")
-
         if len(self.field_vision) >= 7:
+            print("EMERGENCY EXIT")
             self.queue.append(self.goal_stall)
             self.queue.popleft()
             if len(self.queue) > 3:
-            #     self.goal_stall = self.queue[2]
-            # else:
+                self.goal_stall = self.queue[2]
+            else:
                 self.goal_stall = self.queue[0]
 
         self.field_vision = []
