@@ -59,45 +59,53 @@ class Player:
         stall_coordinates = [(stall.x, stall.y, stall.id)
                              for stall in self.stalls_to_visit]
 
-        def compute_distance_matrix(coordinates):
-            n = len(coordinates)
-            matrix = [[0] * n for _ in range(n)]
-            for i in range(n):
-                for j in range(n):
-                    x1, y1, _ = coordinates[i]
-                    x2, y2, _ = coordinates[j]
-                    distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-                    matrix[i][j] = int(round(distance))
-            return matrix
-
-        distance_matrix = compute_distance_matrix(stall_coordinates)
-
-        optimal_order = fast_tsp.find_tour(distance_matrix)
-
-        for index in optimal_order:
-            stall = self.stalls_to_visit[index]
+        if len(self.stalls_to_visit) == 1:
+            stall = self.stalls_to_visit[0]
             pos_x = stall.x
             pos_y = stall.y
             id = stall.id
             waypoint = (pos_x, pos_y, id, "stall")
             self.path_to_follow.append(waypoint)
+        else:
+            def compute_distance_matrix(coordinates):
+                n = len(coordinates)
+                matrix = [[0] * n for _ in range(n)]
+                for i in range(n):
+                    for j in range(n):
+                        x1, y1, _ = coordinates[i]
+                        x2, y2, _ = coordinates[j]
+                        distance = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+                        matrix[i][j] = int(round(distance))
+                return matrix
 
-        # Calculate the distances from the current position to each stall
-        closest_stall, mindist = None, 100000
-        for stall in self.path_to_follow:
-            x = stall[0]
-            y = stall[1]
-            dist = ((self.pos_x - x) ** 2 + (self.pos_y - y) ** 2) ** 0.5
+            distance_matrix = compute_distance_matrix(stall_coordinates)
 
-            if dist < mindist:
-                closest_stall, mindist = stall, dist
+            optimal_order = fast_tsp.find_tour(distance_matrix)
 
-        if closest_stall:
-            # Find the index of the closest stall
-            closest_stall_index = self.path_to_follow.index(closest_stall)
-            # Reorder the stall_coordinates to start with the closest stall
-            self.path_to_follow = self.path_to_follow[closest_stall_index:] + \
-                self.path_to_follow[:closest_stall_index]
+            for index in optimal_order:
+                stall = self.stalls_to_visit[index]
+                pos_x = stall.x
+                pos_y = stall.y
+                id = stall.id
+                waypoint = (pos_x, pos_y, id, "stall")
+                self.path_to_follow.append(waypoint)
+
+            # Calculate the distances from the current position to each stall
+            closest_stall, mindist = None, 100000
+            for stall in self.path_to_follow:
+                x = stall[0]
+                y = stall[1]
+                dist = ((self.pos_x - x) ** 2 + (self.pos_y - y) ** 2) ** 0.5
+
+                if dist < mindist:
+                    closest_stall, mindist = stall, dist
+
+            if closest_stall:
+                # Find the index of the closest stall
+                closest_stall_index = self.path_to_follow.index(closest_stall)
+                # Reorder the stall_coordinates to start with the closest stall
+                self.path_to_follow = self.path_to_follow[closest_stall_index:] + \
+                    self.path_to_follow[:closest_stall_index]
 
         # print()
         # print("final path", self.path_to_follow)
