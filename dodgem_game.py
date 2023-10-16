@@ -1,11 +1,8 @@
 import tkinter as tk
 from tkinter import *
-# import tkFont as tkfont
 import time
 import math
 import random
-import numpy as np
-import fast_tsp
 import os
 import shutil
 import Pmw
@@ -28,7 +25,9 @@ class Stall():
 
 class DodgemGame(tk.Tk):
     def __init__(self, args):
-        # try:
+        if args.disable_tsp == "False" or args.disable_tsp == "false":
+            import fast_tsp
+
         super().__init__()
 
         shutil.rmtree('logs')
@@ -51,20 +50,19 @@ class DodgemGame(tk.Tk):
             print("ERROR: Number of stalls to visit has to be greater than 0")
             return
         elif int(args.no_to_visit) > int(args.no_of_stalls):
-            print("ERROR: Number of stalls to visit has to be lesser than total number of stalls")
+            print("ERROR: Number of stalls to visit has to be lesser than the total number of stalls")
             return
 
         # seed
         random.seed(int(args.seed))
 
         # time
-        self.start_time = time.time()
         self.iteration = 0
-        self.time_interval = 0
 
         # arguments
         self.no_of_stalls = int(args.no_of_stalls)
         self.no_to_visit = int(args.no_to_visit)
+        self.interval = int(args.interval)
 
         # stalls and obstacles
         self.stalls = []
@@ -85,7 +83,6 @@ class DodgemGame(tk.Tk):
 
         # distance matrix for stalls
         self.dist_matrix = [[0] * self.no_of_stalls] * self.no_of_stalls
-        # np.zeros((self.no_of_stalls, self.no_of_stalls))
 
         self.theta = int(args.theta)
         self.T = 0
@@ -118,9 +115,18 @@ class DodgemGame(tk.Tk):
         self.game_state = "resume"
 
         self._configure_game()
-        self.T, self.tsp_path = self.tsp()
+        if args.disable_tsp == "False" or args.disable_tsp == "false":
+            self.T, self.tsp_path = self.tsp()
+        else:
+            self.T, self.tsp_path = 10000, []
+
+        # handle edge case
+        if self.T <= 0:
+            self.T = 1000
+
         with open(self.tsp_log, 'a') as f:
             f.write(str(self.tsp_path))
+
         self.T = self.theta * self.T
         
         if int(args.total_time) > 0:
@@ -182,7 +188,6 @@ class DodgemGame(tk.Tk):
 
         # stalls to visit by players
         self.stalls_to_visit = random.sample(self.stalls, self.no_to_visit)
-
 
         # obstacles
         self.obstacles = []
@@ -332,7 +337,6 @@ class DodgemGame(tk.Tk):
         self.turn_comp = self.canvas.create_text((131) * self.canvas_scale, (14) * self.canvas_scale, anchor="nw", font=('freemono', int(1.8 * self.canvas_scale), 'bold'), text="TURN: " + str(self.turn_no) + "/" + str(self.T))
 
         self.title_comp = self.canvas.create_text((133) * self.canvas_scale, (19) * self.canvas_scale, anchor="nw", font=('freemono', int(1.8 * self.canvas_scale), 'bold'), text="SCORES")
-        
 
         s1 = "ID"
         s2 = "Team"
@@ -340,8 +344,6 @@ class DodgemGame(tk.Tk):
         s4 = "Satisfaction"
         s5 = "Items"
         self.header_comp = self.canvas.create_text((110) * self.canvas_scale, (24) * self.canvas_scale, anchor="nw", font=('freemono', int(1.5 * self.canvas_scale), 'bold'), text=s1.ljust(int(0.4 * self.canvas_scale), " ") + s2.ljust(int(1 * self.canvas_scale), " ") + s5.ljust(int(1.2 * self.canvas_scale), " ") + s3.ljust(int(1.5 * self.canvas_scale), " ") + s4.ljust(int(1.5 * self.canvas_scale), " ") + "\n")
-            
-            
         
         for index, player_state in enumerate(self.player_states):
             s = self.canvas.create_text((110) * self.canvas_scale, (5 * index + 29) * self.canvas_scale, font=('freemono', int(1.5 * self.canvas_scale), 'bold'), anchor="nw", text=str(index + 1).ljust(int(0.4 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " "))
@@ -639,7 +641,7 @@ class DodgemGame(tk.Tk):
                         logs.append("Time taken: " + str(end_time - start_time).ljust(40, " ") + " Action: Move to (" + str(new_pos_x) + ", " + str(new_pos_y) + ") Cannot move as distance > 1 unit")
                     update_wait.append(False)
                 else:
-                    interrupt.append(True)
+                    interrupt.append(False)
                     update_wait.append(True)
                     new_positions.append([pos_x, pos_y])
                     update_move.append(False)
@@ -685,6 +687,7 @@ class DodgemGame(tk.Tk):
 
         # check collision with obstacles
         for i, player_state in enumerate(self.player_states):
+            collision = False
             for stall in self.obstacles:
                 if player_state.wait == 0 and self.check_collision_obstacle(stall.id, stall.x, stall.y, player_state.pos_x, player_state.pos_y, \
                                                                             new_positions[i][0], new_positions[i][1], player_state.color):
@@ -693,28 +696,27 @@ class DodgemGame(tk.Tk):
                     logs[i] += " Collided with obstacle " + str(stall.id)
                     collision = True
 
-            collision = False
-            if new_positions[i][0] >= 100 and new_positions[i][1] >= 100:
+            if self.player_states[i].wait == 0 and new_positions[i][0] >= 100 and new_positions[i][1] >= 100:
                 new_positions[i][0], new_positions[i][1] = 100, 100
                 logs[i] += " Collided with boundary"
                 collision = True
-            elif new_positions[i][0] >= 100:
+            elif self.player_states[i].wait == 0 and new_positions[i][0] >= 100:
                 new_positions[i][0] = 100
                 logs[i] += " Collided with boundary"
                 collision = True
-            elif new_positions[i][1] >= 100:
+            elif self.player_states[i].wait == 0 and new_positions[i][1] >= 100:
                 new_positions[i][1] = 100
                 logs[i] += " Collided with boundary"
                 collision = True
-            elif new_positions[i][0] <= 0 and new_positions[i][1] <= 0:
+            elif self.player_states[i].wait == 0 and new_positions[i][0] <= 0 and new_positions[i][1] <= 0:
                 new_positions[i][0], new_positions[i][1] = 0, 0
                 logs[i] += " Collided with boundary"
                 collision = True
-            elif new_positions[i][0] <= 0:
+            elif self.player_states[i].wait == 0 and new_positions[i][0] <= 0:
                 new_positions[i][0] = 0
                 logs[i] += " Collided with boundary"
                 collision = True
-            elif new_positions[i][1] <= 0:
+            elif self.player_states[i].wait == 0 and new_positions[i][1] <= 0:
                 new_positions[i][1] = 0
                 logs[i] += " Collided with boundary"
                 collision = True
@@ -746,10 +748,11 @@ class DodgemGame(tk.Tk):
                 if self.player_states[i].interaction > 0:
                     self.player_states[i].satisfaction += self.player_states[i].interaction * math.log2(self.player_states[i].interaction)
                 self.player_states[i].interaction = 0
-            else:
+            elif self.player_states[i].wait == 0:
                 self.player_states[i].increment_interaction()
 
             if update_wait[i]:
+                logs[i] += " wait time is " + str(self.player_states[i].wait)
                 self.player_states[i].wait -= 1
                 
 
@@ -784,7 +787,7 @@ class DodgemGame(tk.Tk):
         # Next turn after 100 ms
         if self.game_state == "resume":
             if self.gui:
-                self.after(100, self._play_game)
+                self.after(self.interval, self._play_game)
             else:
                 time.sleep(1)
                 self._play_game()

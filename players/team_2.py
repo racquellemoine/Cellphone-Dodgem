@@ -1,5 +1,6 @@
 import math
 import random
+import fast_tsp
 import numpy
 random.seed(2)
 
@@ -118,7 +119,7 @@ class Player:
 
         for obstacle in obstacles:
             print('obstacle:', obstacle)
-            self.obstacles_loc.add((int(obstacle[1]), int(obstacle[2])))
+            self.obstacles_loc.append((obstacle[1], obstacle[2]))
             self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
     # simulator calls this function when the player encounters an obstacle

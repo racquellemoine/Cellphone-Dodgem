@@ -144,8 +144,8 @@ class Player:
     def __update_vg(self):
         if not self.polys:
             return
-        # p = list(self.polys.values())
-        p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
+        p = list(self.polys.values())
+        # p = self.__merge_nearby_polys(np.array(list(self.polys.keys()))[:,1:])  # uncomment this and comment the above line to enable poly merging
         self.graph.build(p, self.workers)
 
     def __update_path(self):
@@ -204,7 +204,7 @@ class Player:
     def get_next_move(self):
         if self.collision > 0:
             self.collision -= 1
-            if self.collision == 0:
+            if self.collision == 0 and len(self.q) > 0:
                 self.__update_path()
 
         elif len(self.q) > 0:
