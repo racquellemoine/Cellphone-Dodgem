@@ -18,6 +18,13 @@ class Point():
         self.x = x
         self.y = y
 
+    @staticmethod
+    def from_3d(pt):
+        return Point(pt[0], pt[2])
+
+    def to_3d(self):
+        return (self.x, 0.0, self.y)
+
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
         self.id = id
@@ -50,6 +57,10 @@ class Player:
         self.collision = 0
         self.is_alert = False
 
+        # navmesh
+        self.baker = nmb.NavmeshBaker()
+        self.__init_nm()
+
     def __init_queue(self):
         stv = self.stalls_to_visit
         tsp = self.tsp_path
@@ -72,6 +83,22 @@ class Player:
                 self.dists[i+1][j+1] = math.ceil(d)
                 
         self.tsp_path = fast_tsp.find_tour(self.dists) if n > 1 else [0, 1]
+
+    def __init_nm(self):
+        self.baker.add_geometry([(0.0, 0.0, 0.0),
+                                 (0.0, 0.0, 100.0),
+                                 (100.0, 0.0, 0.0),
+                                 (100.0, 0.0, 100.0)],
+                                [[0, 1, 2, 3]])
+        is_bake = self.baker.bake(agent_height=0.0,
+                                  agent_radius=0.5,
+                                  agent_max_climb=0.0,
+                                  verts_per_poly=4)
+        if is_bake:
+            verts, polys = self.baker.get_polygonization()
+            self.baker.save_to_text("init_nm.txt")
+        else:
+            print("Failed to bake navmesh")
 
     @staticmethod
     def __calc_distance(x1, y1, x2, y2):

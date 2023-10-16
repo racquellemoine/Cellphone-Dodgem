@@ -1,3 +1,6 @@
 [submodule "players/RVO_Py_MAS"]
 	path = players/RVO_Py_MAS
 	url = https://github.com/MengGuo/RVO_Py_MAS.git
+[submodule "players/Navmesh-Explorer"]
+	path = players/Navmesh-Explorer
+	url = git@github.com:Tugcga/Navmesh-Explorer.git
