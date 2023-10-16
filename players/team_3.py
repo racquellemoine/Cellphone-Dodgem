@@ -23,9 +23,9 @@ class Player:
         #wall boundaries for wall following algorithm 
         self.rightLimit = 100 
         self.leftLimit = 0 
-        self.upperLimit = 100 
-        self.lowerLimit = 0
-        self.walkingDirection = "right"
+        self.upperLimit = 0 
+        self.lowerLimit = 100
+
         #keep track of current walking direction 
         #we want to walk counter clockwise
         print("starting at: ", self.pos_x, self.pos_y) 
@@ -44,6 +44,8 @@ class Player:
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
+        #remove stall_id from stalls_to_visit 
+        if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
         #remove stall_id from stalls_to_visit 
         if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
 
@@ -131,20 +133,20 @@ class Player:
             return new_pos_x, new_pos_y
         
         #within 10 steps of upper boundary while walking up 
-        if self.walkingDirection == "up" and self.pos_y in range(self.upperLimit-10, self.upperLimit): 
+        if self.walkingDirection == "up" and self.pos_y in range(self.upperLimit, self.upperLimit+11): 
             #move boundary 10 steps down from current upper boundary 
             print("walking up and approached limit")
-            self.upperLimit = self.upperLimit-10
+            self.upperLimit = self.upperLimit+10
             self.walkingDirection = "back track down"
             new_pos_x = self.pos_x
-            new_pos_y = self.pos_y-1
+            new_pos_y = self.pos_y+1
             return new_pos_x, new_pos_y
         #walking up but haven't approached upperLimit yet
         #continue walking up for 20 steps 
         if self.walkingDirection == "up": 
             print("walking up, haven't approached limit")
             new_pos_x = self.pos_x
-            new_pos_y = self.pos_y + 1
+            new_pos_y = self.pos_y - 1
             return new_pos_x, new_pos_y
         
         #within 10 steps of left boundary while walking left 
@@ -163,21 +165,20 @@ class Player:
             return new_pos_x, new_pos_y
         
         #within 10 steps of lower boundary while walking down 
-        if self.walkingDirection == "down" and self.pos_y in range(self.lowerLimit, self.lowerLimit+11): 
+        if self.walkingDirection == "down" and self.pos_y in range(self.lowerLimit-10, self.lowerLimit): 
             print("walking down and approached lowerLimit")
             #move boundary 10 steps up from current lowerLimit and walk right 
-            self.lowerLimit = self.lowerLimit + 10 
+            self.lowerLimit = self.lowerLimit - 10 
             new_pos_x = self.pos_x
-            new_pos_y = self.pos_y + 1
+            new_pos_y = self.pos_y - 1
             self.walkingDirection = "back track up"
             return new_pos_x, new_pos_y
         #walking down but haven't approached lowerLimit yet 
         #continue walking down for 20 steps 
         if self.walkingDirection == "down": 
             print("walking down")
-            print()
             new_pos_x = self.pos_x
-            new_pos_y = self.pos_y-1
+            new_pos_y = self.pos_y+1
             return new_pos_x, new_pos_y
         
         #we reached right limit and are backtracking left 
@@ -194,8 +195,8 @@ class Player:
         if self.walkingDirection == "back track down": 
             print("back tracking down")
             new_pos_x = self.pos_x 
-            new_pos_y = self.pos_y - 1
-            if new_pos_y == self.upperLimit - 10: 
+            new_pos_y = self.pos_y + 1
+            if new_pos_y == self.upperLimit + 10: 
                 #once we are 10 steps below upper limit, walk left 
                 self.walkingDirection = "left"
             return new_pos_x, new_pos_y
@@ -214,20 +215,16 @@ class Player:
         if self.walkingDirection == "back track up": 
             print("back tracking up")
             new_pos_x = self.pos_x
-            new_pos_y = self.pos_y + 1
-            if new_pos_y == self.lowerLimit + 10: 
+            new_pos_y = self.pos_y - 1
+            if new_pos_y == self.lowerLimit - 10: 
                 #once we are 10 steps up from lower limit, walk right
                 self.walkingDirection = "right"
             return new_pos_x, new_pos_y
 
         #no more board left to explore 
-        if self.lowerLimit >= self.upperLimit and self.leftLimit >= self.rightLimit:  
+        if self.lowerLimit <= self.upperLimit and self.leftLimit >= self.rightLimit:  
             print("no more board left")
             return self.pos_x, self.pos_y
 
-
-        #this is only really occuring if obstacle -> not entirely sure why 
-        #self.pos_x -= 1 
-        #self.pos_y += 1 
         print("returning same position")
         return self.pos_x, self.pos_y
