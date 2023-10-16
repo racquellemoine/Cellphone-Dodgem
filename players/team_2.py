@@ -107,7 +107,6 @@ class Player:
 
     def pass_lookup_info(self, other_players, obstacles):
 
-        # print("In pass_lookup_info function.")
         # update the information to the self.discovered_region variable
 
         # Imp note - since this is a small version put together in less time, I'll just assume our vision is 10x10 square as opposed to the 10 unit radius for us to see.
@@ -119,7 +118,6 @@ class Player:
                 self.discovered_region[int(curr_x)][int(curr_y)] = 1
 
         for obstacle in obstacles:
-            # print('obstacle:', obstacle)
             self.obstacles_loc.add((obstacle[1], obstacle[2], obstacle[0]))
             self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
@@ -155,7 +153,6 @@ class Player:
                 curr_y = max(min(pos_y + y_move, 99), 0)
 
                 if self.discovered_region[int(curr_x)][int(curr_y)] == -1:
-                    # print(f"undiscovered location <{curr_x}, {curr_y}> found.")
                     return True  # i.e. we should look up
 
             # otherwise, don't look up
@@ -255,28 +252,15 @@ class Player:
             return False
 
         def will_collide(new_x, new_y):
-            print("will collide called")
-
-            print("AVOID", end="")
-            for x in list(self.obstacles_loc):
-                print(x, end="")
-            print("\n")
-
-            radius = 1
             # Make a copy of the obstacles set
             obstacles_copy = set(self.obstacles_loc)
             for x, y, n in list(obstacles_copy):
                 if check_collision_obstacle(x, y, self.pos_x, self.pos_y, new_x, new_y):
                     return True
-                # distance = math.sqrt(((new_x - x) ** 2 + (new_y - y) ** 2))
-                # if distance <= radius:
-                #     print(n, "collide called on n!")
-                #     return True
 
             return False
 
         def gen_rand_point():
-
             # Generate random velocity components
             random_angle = random.uniform(0, 2 * math.pi)
             self.vx = math.cos(random_angle)
