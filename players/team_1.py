@@ -4,7 +4,7 @@ import fast_tsp
 from collections import deque
 from datetime import timedelta, datetime
 
-import constants
+# import constants
 
 random.seed(2)
 
@@ -57,7 +57,7 @@ class Player:
 
         self.goal_stall = None
         self.is_rrt_planning = False
-        self.rrt_path = []
+        self.rrt_tree = []
         self.collided = False
 
     # simulator calls this function when the player collects an item from a stall
@@ -80,14 +80,6 @@ class Player:
         print("THIS IS THE PATH", self.tsp_path)
 
     def collect_item(self, stall_id):
-        # for stall in self.stalls_to_visit:
-        #     if stall.id == stall_id:
-        #         self.stalls_to_visit.remove(stall)
-        # self.goal_stall = None
-        # return stall_id
-
-        # if len(self.queue) > 0:
-
         if stall_id == self.queue[0].id:
             self.queue.popleft()
             self.goal_stall = None
@@ -99,7 +91,7 @@ class Player:
         #         self.goal_stall = None
         #         break
     def end_game_tactic(self):
-        self.get_action(0,0)
+        self.get_action(-10000,-10000)
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
@@ -148,13 +140,15 @@ class Player:
     # simulator calls this function to get the action 'lookup', 'move', or 'lookup move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
-        
+
+        #end game
+        if len(self.queue) == 0 or self.T_theta <= 10:
+            return 'move'
+
         self.pos_x = pos_x
         self.pos_y = pos_y
 
-        # return 'move'
-
-        #lookup whole time
+        #lookup whole time during game
         return 'lookup move'
 
     #########################################################
@@ -370,27 +364,6 @@ class Player:
             x, y (tuple) - the new point in space to move towards
         """
 
-        # vector = [new_point[0] - current_node[0], new_point[1] - current_node[1]]
-        # distance = math.dist(current_node, new_point)
-        #
-        # # the amount we will actually extend, depending on dist vs theta
-        # # --> extend at MOST delta, but at least the dist between curr and new points
-        # # extend_amt = 0
-        #
-        # # using unit vector to find point in same direction
-        # if distance > delta:
-        #     # only extend delta
-        #     unit_vec = [vector[0] / distance, vector[1] / distance]
-        #     x = current_node[0] + (unit_vec[0] * delta)
-        #     y = current_node[1] + (unit_vec[1] * delta)
-        #
-        # else:
-        #     # extend the actual distance btw current_node and new_point
-        #     # aka, return new point
-        #     return new_point
-        #
-        # return x, y
-
         vx= new_point[0] - current_node[0]
         vy = new_point[1] - current_node[1]
         self.sign_x = 1
@@ -401,32 +374,6 @@ class Player:
 
         new_pos_x = self.pos_x + self.sign_x * self.vx
         new_pos_y = self.pos_y + self.sign_y * self.vy
-
-
-        #
-        #
-        # ###
-        #
-        #
-        # new_vx = new_point[0] - current_node[0]
-        # new_vy = new_point[1] - current_node[1]
-        #
-        # # Calculate the magnitude (distance) of the vector
-        # distance = (new_vx ** 2 + new_vy ** 2) ** 0.5
-        #
-        # # Check if the distance is greater than 1 meter
-        # if distance > 1.0:
-        #     # Normalize the vector to get a unit vector
-        #     vx = new_vx / distance
-        #     vy = new_vy / distance
-        #     # Calculate the new position by adding the unit vector (1 meter away) to the current position
-        #     x = current_node[0] + vx
-        #     y = current_node[1] + vy
-        #     print("DISTANCE >1")
-        # else:
-        #     # If the distance is less than or equal to 1 meter, return the new_point as is
-        #     print("DISTANCE is less than or equal to 1 meter")
-        #     x, y = new_point
 
         return new_pos_x, new_pos_y
 
@@ -524,8 +471,10 @@ class Player:
     def _get_next_tsp_node(self):
         """
         Get the next node in the tsp path and set it as the goal stall.
-
         We do not pop it from the queue until we collect it.
+
+        Call emergency exit to detect if we should get a different goal stall
+        based on high traffic.
         """
         if len(self.queue) > 0:
             #don't pop until we collect it!
@@ -546,7 +495,6 @@ class Player:
         # if we just start or when we finish collecting an item
         if self.goal_stall is None and len(self.queue) > 0:
             self._get_next_tsp_node()
-            # self.goal_stall = self.queue.popleft() # so should i NOT remove it in encounter obstacle?
             # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
 
 
@@ -574,17 +522,8 @@ class Player:
                 return new_pos_x, new_pos_y
             else:
                 print("Obstacle detected, planning with RRT")
-                # self.is_rrt_planning = True
-                # self.rrt_path = self.rrt(self.goal_stall, self.obstacles_list, self.other_players_list)
-                # print(f'RRT path {self.rrt_path}')
-                # self.is_rrt_planning = True
+
                 self.rrt_tree = [self.start_node]  # Initialize the RRT tree with the start node
-
-                # if self.is_rrt_planning:
-                # Extend the RRT tree towards the goal
-
-                # self.is_rrt_planning = False  # change the logic of the flags
-
 
                 # explore until new point is collision free or until 1 second has passed
                 begin = datetime.utcnow()
@@ -593,11 +532,6 @@ class Player:
                     if self._is_collision_free(self.obstacles_list, self.other_players_list, new_point):
                         break
 
-                # new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
-                # print(f'getting new point {new_point}')
-                # print(f'DISTANCE CURR-NEW POINT {math.dist(self.start_node, new_point)}')
-
-                # if self._is_collision_free(self.obstacles_list, self.other_players_list, new_point):
                 closest_node = self._nearest_node(self.rrt_tree, new_point)
 
                 new_node = self._extend(closest_node, new_point, self.DELTA)
@@ -615,30 +549,17 @@ class Player:
 
                     return self.pos_x, self.pos_y
 
-            #
-            # # Currently planning with RRT
-            # if len(self.rrt_path) > 0:
-            #     next_point = self.rrt_path.pop(0)
-            #     new_pos_x, new_pos_y = next_point
-            #
-            #     self._bounce_off_boundaries(self.pos_x, self.pos_y)
-            #     print("following RRT path")
-            #     return new_pos_x, new_pos_y
-            # else:
-            #     print("RRT path finished, moving directly to goal stall")
-            #     self.is_rrt_planning = False
-            #     self.rrt_path = []
-
 
         elif self.goal_stall is None and len(self.queue) == 0:
             self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
-            print(f'No more stalls to visit, stand still {self.pos_x}, {self.pos_y}')
+            # print(f'No more stalls to visit, stand still {self.pos_x}, {self.pos_y}')
+
             return self.pos_x, self.pos_y
 
         # TO DO: WHAT ELSE DO WE DO WHEN WE ACTUALLY JUST HAD A COLLISION? HOW DO WE MOVE?
         elif self.collided:
-            print("detected collision?")
+            # print("detected collision?")
             self.collided = False
 
             self._bounce_off_boundaries(self.pos_x, self.pos_y)
@@ -646,10 +567,6 @@ class Player:
             new_pos_x = self.pos_x + self.sign_x * self.vx
             new_pos_y = self.pos_y + self.sign_y * self.vy
 
-            print(f'Collision detected, moving to new {new_pos_x}, {new_pos_y}')
+            # print(f'Collision detected, moving to new {new_pos_x}, {new_pos_y}')
             return new_pos_x, new_pos_y
-
-        # elif self.T_theta <= 10:
-        #     print("End game tactic")
-        #     self.end_game_tactic()
 
