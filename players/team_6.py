@@ -229,7 +229,7 @@ class Player:
             if newVector.y > 99 or newVector.y < 1:
                 continue
             for obstacle in self.obstacles_known:
-                if newVector.dist2(obstacle) < DANGER_ZONE+2:   
+                if newVector.dist2(obstacle) < DANGER_ZONE+1.75:   
                     addVector = False
             if addVector:
                 newVectors.append(newVector)
