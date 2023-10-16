@@ -184,6 +184,88 @@ class Player:
         if not self.path_to_follow or len(self.path_to_follow) == 0:
             return self.pos_x, self.pos_y  # No stalls to visit
 
+        def check_collision_obstacle(stall_x, stall_y, p_x, p_y, new_p_x, new_p_y):
+            def intersection(a, b, c, d, e, f, g, h):
+                s0 = [(a, b), (c, d)]
+                s1 = [(e, f), (g, h)]
+                dx0 = s0[1][0]-s0[0][0]
+                dx1 = s1[1][0]-s1[0][0]
+                dy0 = s0[1][1]-s0[0][1]
+                dy1 = s1[1][1]-s1[0][1]
+                p0 = dy1*(s1[1][0]-s0[0][0]) - dx1*(s1[1][1]-s0[0][1])
+                p1 = dy1*(s1[1][0]-s0[1][0]) - dx1*(s1[1][1]-s0[1][1])
+                p2 = dy0*(s0[1][0]-s1[0][0]) - dx0*(s0[1][1]-s1[0][1])
+                p3 = dy0*(s0[1][0]-s1[1][0]) - dx0*(s0[1][1]-s1[1][1])
+                return (p0*p1 <= 0) & (p2*p3 <= 0)
+
+            def check_collision(x1, y1, new_x1, new_y1, x2, y2, new_x2, new_y2):
+                def distance(x, y, new_x, new_y):
+                    dx = new_x - x
+                    dy = new_y - y
+                    return dx, dy
+
+                def dot_product(dx1, dy1, dx2, dy2):
+                    return dx1 * dx2 + dy1 * dy2
+
+                dx1, dy1 = distance(x1, y1, new_x1, new_y1)
+                dx2, dy2 = distance(x2, y2, new_x2, new_y2)
+
+                A = dot_product(dx1, dx1, dx2, dx2) + dot_product(dy1,
+                                                                  dy1, dy2, dy2) - 2 * dot_product(dx1, dx2, dy1, dy2)
+                B = 2 * (x1 * dx1 - x2 * dx1 - x1 * dx2 + x2 * dx2 +
+                         y1 * dy1 - y2 * dy1 - y1 * dy2 + y2 * dy2)
+                C = x1 * x1 + x2 * x2 + y1 * y1 + y2 * y2 - 2 * x1 * x2 - 2 * y1 * y2 - 0.25
+
+                D = B * B - 4 * A * C
+
+                if A == 0:
+                    if B == 0:
+                        return C == 0
+                    root = (-C) / B
+                    return 0 <= root <= 1
+
+                if D < 0:
+                    return False
+
+                if D == 0:
+                    root = (-B) / (2 * A)
+                    return 0 <= root <= 1
+
+                if D > 0:
+                    root1 = (-B + math.sqrt(D)) / (2 * A)
+                    root2 = (-B - math.sqrt(D)) / (2 * A)
+
+                    return (0 <= root1 <= 1) or (0 <= root2 <= 1)
+
+                return False
+
+            c1x, c1y = stall_x - 1, stall_y - 1
+            c2x, c2y = stall_x + 1, stall_y - 1
+            c3x, c3y = stall_x + 1, stall_y + 1
+            c4x, c4y = stall_x - 1, stall_y + 1
+
+            if intersection(c1x, c1y - 0.5, c2x, c2y - 0.5, p_x, p_y, new_p_x, new_p_y):
+                return True
+            if intersection(c2x + 0.5, c2y, c3x + 0.5, c3y, p_x, p_y, new_p_x, new_p_y):
+                return True
+            if intersection(c3x, c3y + 0.5, c4x, c4y + 0.5, p_x, p_y, new_p_x, new_p_y):
+                return True
+            if intersection(c4x - 0.5, c4y, c1x - 0.5, c1y, p_x, p_y, new_p_x, new_p_y):
+                return True
+            if check_collision(c1x, c1y, c1x, c1y, p_x, p_y, new_p_x, new_p_y):
+                return True
+
+            if check_collision(c2x, c2y, c2x, c2y, p_x, p_y, new_p_x, new_p_y):
+                return True
+
+            if check_collision(c3x, c3y, c3x, c3y, p_x, p_y, new_p_x, new_p_y):
+                return True
+
+            if check_collision(c4x, c4y, c4x, c4y, p_x, p_y, new_p_x, new_p_y):
+                return True
+
+            return False
+
         def will_collide(new_x, new_y):
             print("will collide called")
 
@@ -192,42 +274,44 @@ class Player:
                 print(x, end="")
             print("\n")
 
-            radius = 0.5
+            radius = 1
             # Make a copy of the obstacles set
             obstacles_copy = set(self.obstacles_loc)
             for x, y, n in list(obstacles_copy):
-                distance = math.sqrt(((new_x - x) ** 2 + (new_y - y) ** 2))
-                if distance <= radius:
-                    print(n, "collide called on n!")
+                if check_collision_obstacle(x, y, self.pos_x, self.pos_y, new_x, new_y):
                     return True
+                # distance = math.sqrt(((new_x - x) ** 2 + (new_y - y) ** 2))
+                # if distance <= radius:
+                #     print(n, "collide called on n!")
+                #     return True
 
             return False
 
+        def gen_rand_point():
+
+            # Generate random velocity components
+            random_angle = random.uniform(0, 2 * math.pi)
+            self.vx = math.cos(random_angle)
+            self.vy = math.sin(random_angle)
+
+            # Calculate the new position
+            new_pos_x = self.pos_x + self.vx
+            new_pos_y = self.pos_y + self.vy
+
+            # Ensure that the velocity is within bounds
+            max_speed = 1.0  # Maximum speed is 1 m/s
+            norm = math.sqrt(self.vx**2 + self.vy**2)
+            if norm > max_speed:
+                self.vx = max_speed * self.vx / norm
+                self.vy = max_speed * self.vy / norm
+
+            # Check if the new position is within bounds (0-100)
+            new_pos_x = max(min(new_pos_x, 100), 0)
+            new_pos_y = max(min(new_pos_y, 100), 0)
+
+            return new_pos_x, new_pos_y
+
         if self.turn_counter - self.collision_turn <= 11:
-
-            def gen_rand_point():
-
-                # Generate random velocity components
-                random_angle = random.uniform(0, 2 * math.pi)
-                self.vx = math.cos(random_angle)
-                self.vy = math.sin(random_angle)
-
-                # Calculate the new position
-                new_pos_x = self.pos_x + self.vx
-                new_pos_y = self.pos_y + self.vy
-
-                # Ensure that the velocity is within bounds
-                max_speed = 1.0  # Maximum speed is 1 m/s
-                norm = math.sqrt(self.vx**2 + self.vy**2)
-                if norm > max_speed:
-                    self.vx = max_speed * self.vx / norm
-                    self.vy = max_speed * self.vy / norm
-
-                # Check if the new position is within bounds (0-100)
-                new_pos_x = max(min(new_pos_x, 100), 0)
-                new_pos_y = max(min(new_pos_y, 100), 0)
-
-                return new_pos_x, new_pos_y
 
             new_pos_x, new_pos_y = gen_rand_point()
 
