@@ -239,30 +239,18 @@ class Player:
 
                 return False
 
-            c1x, c1y = stall_x - 1, stall_y - 1
-            c2x, c2y = stall_x + 1, stall_y - 1
-            c3x, c3y = stall_x + 1, stall_y + 1
-            c4x, c4y = stall_x - 1, stall_y + 1
+            corners = [
+                (stall_x - 1, stall_y - 1),
+                (stall_x + 1, stall_y - 1),
+                (stall_x + 1, stall_y + 1),
+                (stall_x - 1, stall_y + 1)
+            ]
 
-            if intersection(c1x, c1y - 0.5, c2x, c2y - 0.5, p_x, p_y, new_p_x, new_p_y):
-                return True
-            if intersection(c2x + 0.5, c2y, c3x + 0.5, c3y, p_x, p_y, new_p_x, new_p_y):
-                return True
-            if intersection(c3x, c3y + 0.5, c4x, c4y + 0.5, p_x, p_y, new_p_x, new_p_y):
-                return True
-            if intersection(c4x - 0.5, c4y, c1x - 0.5, c1y, p_x, p_y, new_p_x, new_p_y):
-                return True
-            if check_collision(c1x, c1y, c1x, c1y, p_x, p_y, new_p_x, new_p_y):
-                return True
-
-            if check_collision(c2x, c2y, c2x, c2y, p_x, p_y, new_p_x, new_p_y):
-                return True
-
-            if check_collision(c3x, c3y, c3x, c3y, p_x, p_y, new_p_x, new_p_y):
-                return True
-
-            if check_collision(c4x, c4y, c4x, c4y, p_x, p_y, new_p_x, new_p_y):
-                return True
+            for (x1, y1), (x2, y2) in zip(corners, corners[1:] + [corners[0]]):
+                if intersection(x1, y1 - 0.5, x2, y2 - 0.5, p_x, p_y, new_p_x, new_p_y):
+                    return True
+                if check_collision(x1, y1, x1, y1, p_x, p_y, new_p_x, new_p_y):
+                    return True
 
             return False
 
