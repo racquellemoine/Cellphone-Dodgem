@@ -17,11 +17,10 @@ class Vector:
         self.stall = _stall #next stall of vector, used in a* search route
         self.dist = _distTraveled #distance traveled in route so far, used in a* search route
 
-    #two vectors are equal if they have the same direction and distance to next stall
+    #two vectors are equal if they have the same position
     def __eq__(self, other):
         direction =  (self.x == other.x) and (self.y == other.y)
-        distanceToStall =  self.__distance(self.stall) == other.__distance(other.stall)
-        return direction and distanceToStall
+        return direction
     
     # euclideian distance heuristic to the next stall, used for the priority queue in a* search
     def __lt__(self, other):
@@ -198,7 +197,7 @@ class Player:
                 if (curr.x, curr.y) not in explored:
                     explored.append((curr.x, curr.y))
                     # return path 
-                    if curr.dist2(nextStall) < 3 or curr.dist >= 7:
+                    if curr.dist2(nextStall) < 3 or curr.dist >= 20:
                         return self.get_astar_path(curr)
                     for child_vector in self.aStar_expand(curr, nextStall):
                         if (child_vector.x, child_vector.y) not in explored:
@@ -209,9 +208,34 @@ class Player:
     #returns a list of vectors, rotating the current vector by 22.5 degrees left and right
     #this represents 8 different directions from the current vector in a 180 degree area
     def aStar_expand(self, vector, stall):
-        rotate = 0
         newVectors = []
-        for i in range(0, 4):
+        move = [
+            (0, .9),
+            (0, -.9),
+            (-.9, 0),
+            (.9, 0),
+            (-1/math.sqrt(2), 1/math.sqrt(2)),
+            (1/math.sqrt(2), 1/math.sqrt(2)),
+            (1 / math.sqrt(2), -1 / math.sqrt(2)),
+            (-1 / math.sqrt(2), -1 / math.sqrt(2))
+        ]
+        for currentMove in move:
+            addVector = True
+            newX = currentMove[0]
+            newY = currentMove[1]
+            newVector =  Vector(newX+vector.x, newY+vector.y, vector, stall, vector.dist + 1)
+            if newVector.x > 99 or newVector.x < 1:
+                continue
+            if newVector.y > 99 or newVector.y < 1:
+                continue
+            for obstacle in self.obstacles_known:
+                if newVector.dist2(obstacle) < DANGER_ZONE+1.5:   
+                    addVector = False
+            if addVector:
+                newVectors.append(newVector)
+        return newVectors
+
+        for i in range(0, 8):
             addVector = True
             newX = (vector.x * math.cos(math.radians(rotate))) - (vector.y * math.sin(math.radians(rotate)))
             newY = (vector.x * math.sin(math.radians(rotate))) + (vector.y * math.cos(math.radians(rotate)))
@@ -221,10 +245,10 @@ class Player:
                     addVector = False
             if addVector:
                 newVectors.append(newVector)
-            rotate += 22.5
+            rotate += 45
         
         rotate = 0
-        for i in range(0, 4):
+        for i in range(0, 0):
             addVector = True
             newX = (vector.x * math.cos(math.radians(rotate))) - (vector.y * math.sin(math.radians(rotate)))
             newY = (vector.x * math.sin(math.radians(rotate))) + (vector.y * math.cos(math.radians(rotate)))
@@ -240,7 +264,6 @@ class Player:
     
     #get the path of vectors chosen by a* search
     def get_astar_path(self, vector):
-        print(vector)
         astar_path = []
         while vector.parent:
             astar_path.insert(0, vector)
@@ -282,11 +305,10 @@ class Player:
 
     def __avoid_obstacles(self):
         for obstacle in self.obstacles_known:
-            if self.pos.dist2(obstacle) < DANGER_ZONE+2.3:
+            if self.pos.dist2(obstacle) < DANGER_ZONE+8:
                 #self.dir = self.pos.normalized_dir(obstacle).left_90()
                 self.aStarRoute  = self.__astar()
                 # self.__update_tsp()
-                print("avoiding obstacle")
                 break
 
     # simulator calls this function when the player encounters an obstacle
@@ -325,25 +347,22 @@ class Player:
             # self.should_lookup = False
             # self.times_lkp += 1
             self.__update_tsp()
+            self.dir = self.pos.normalized_dir(self.__next_stall())
             return 'lookup move'
         
         # if self.times_lkp == 2:
         #     self.times_lkp = 0
         #     self.__update_tsp()
-        
         return 'move'
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
         if len(self.aStarRoute) > 0:
-            print("position:")
-            print(self.pos)
-            print(self.aStarRoute)
             curr = self.aStarRoute[0]
             curr = self.pos.normalized_dir(curr)
             self.aStarRoute.pop(0)
             self.dir.x = curr.x
             self.dir.y = curr.y
-            print(self.dir)
+
         return self.pos.x + self.dir.x, self.pos.y + self.dir.y
