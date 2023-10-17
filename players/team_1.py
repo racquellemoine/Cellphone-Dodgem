@@ -160,7 +160,8 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        # print('Encountered obstacle')
+        print('Encountered obstacle')
+
         self.collided = True
 
         self.vx = random.random()
@@ -529,7 +530,7 @@ class Player:
         if len(self.queue) > 0:
             #don't pop until we collect it!
             self.goal_stall = self.queue[0]
-            self.emergency_exit()
+            # self.emergency_exit()
 
 
     #########################################################
@@ -542,11 +543,19 @@ class Player:
         # if we detect an obstacle or player in our path, we want to use RRT to plan a path around it
         # if we don't detect anything, we want to move directly to the goal stall
 
+        # print(f'Player {self.id} at {self.pos_x}, {self.pos_y}')
+        # print everything from the queue so we see the ID and not the object
+        # for stall in self.queue:
+        #     print(f'Queue: {stall.id}')
+        #
+        # print("queue done")
+
+
         # if we just start or when we finish collecting an item
         if self.goal_stall is None and len(self.queue) > 0:
             self._get_next_tsp_node()
+            # print(f'AFTER getting next node Q={self.queue}')
             # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
-
 
         if self.goal_stall:
 
@@ -595,9 +604,17 @@ class Player:
                     new_pos_x, new_pos_y = new_node
                     return new_pos_x, new_pos_y
                 else:
-                    # print("Collision detected while extending RRT tree")
+                    print("Collision detected while extending RRT tree")
 
-                    return self.pos_x, self.pos_y
+                    self.vx = random.random()
+                    self.vy = math.sqrt(1 - self.vx ** 2)
+                    self.sign_x *= -1
+                    self.sign_y *= -1
+
+                    new_pos_x = self.pos_x + self.sign_x * self.vx
+                    new_pos_y = self.pos_y + self.sign_y * self.vy
+
+                    return new_pos_x, new_pos_y
 
 
         elif self.goal_stall is None and len(self.queue) == 0:
@@ -609,7 +626,7 @@ class Player:
 
         # TO DO: WHAT ELSE DO WE DO WHEN WE ACTUALLY JUST HAD A COLLISION? HOW DO WE MOVE?
         elif self.collided:
-            # print("detected collision?")
+            print("collision from prev turn")
             self.collided = False
 
             self._bounce_off_boundaries(self.pos_x, self.pos_y)
