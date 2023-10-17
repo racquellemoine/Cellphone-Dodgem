@@ -20,10 +20,10 @@ class Point():
 
     @staticmethod
     def from_3d(pt):
-        return Point(pt[0], pt[2])
+        return Point(pt[0] * 5, pt[2] * 5)
 
     def to_3d(self):
-        return (self.x, 0.0, self.y)
+        return (self.x / 5, 0.0, self.y / 5)
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -87,17 +87,19 @@ class Player:
 
     def __init_nm(self):
         self.baker.add_geometry([(0.0, 0.0, 0.0),
-                                 (0.0, 0.0, 100.0),
-                                 (100.0, 0.0, 100.0),
-                                 (100.0, 0.0, 0.0)],
+                                 (0.0, 0.0, 50.0),
+                                 (50.0, 0.0, 50.0),
+                                 (50.0, 0.0, 0.0)],
                                 [[0, 1, 2, 3]])
         is_bake = self.baker.bake(cell_size=1.0,
                                   cell_height=1.0,
                                   agent_height=0.0,
                                   agent_radius=0.5,
                                   agent_max_climb=0.0,
-                                  verts_per_poly=3,
-                                  edge_max_len=142.0)
+                                  region_min_size=1,
+                                  region_merge_size=20,
+                                  verts_per_poly=4,
+                                  edge_max_len=70.8)
         if is_bake:
             verts, polys = self.baker.get_polygonization()
             print(verts)
@@ -119,14 +121,14 @@ class Player:
     @staticmethod
     def __build_poly(o_x, o_y):
         verts = []
-        verts.append((o_x - 1, 0.0, o_y - 1))
-        verts.append((o_x - 1, 0.0, o_y + 1))
-        verts.append((o_x + 1, 0.0, o_y + 1))
-        verts.append((o_x + 1, 0.0, o_y - 1))
-        verts.append((o_x - 1, 1.0, o_y - 1))
-        verts.append((o_x - 1, 1.0, o_y + 1))
-        verts.append((o_x + 1, 1.0, o_y + 1))
-        verts.append((o_x + 1, 1.0, o_y - 1))
+        verts.append((o_x - 0.5, 0.0, o_y - 0.5))
+        verts.append((o_x - 0.5, 0.0, o_y + 0.5))
+        verts.append((o_x + 0.5, 0.0, o_y + 0.5))
+        verts.append((o_x + 0.5, 0.0, o_y - 0.5))
+        verts.append((o_x - 0.5, 1.0, o_y - 0.5))
+        verts.append((o_x - 0.5, 1.0, o_y + 0.5))
+        verts.append((o_x + 0.5, 1.0, o_y + 0.5))
+        verts.append((o_x + 0.5, 1.0, o_y - 0.5))
 
         polys = [[0, 3, 2, 1], 
                  [2, 6, 5, 1], 
