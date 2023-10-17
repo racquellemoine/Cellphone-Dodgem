@@ -4,8 +4,6 @@ import fast_tsp
 from collections import deque
 from datetime import timedelta, datetime
 
-# import constants
-
 random.seed(2)
 
 #Constants
@@ -44,7 +42,7 @@ class Player:
         self.set_queue()
         
         self.obstacles_list = []
-        self.other_players_list = []
+        self.other_players_dict = {}
         self.field_vision = []
 
         self.XDIM = 100  # constants.vis_height
@@ -86,20 +84,10 @@ class Player:
 
         for stall in self.queue:
             if stall.id == stall_id:
-                # print("Stall id: ", stall.id)
+                print("Stall id: ", stall.id)
                 self.queue.remove(stall)
                 self.goal_stall = None
                 break
-
-    def _update_players_list(self):
-        """
-        Update the list of players to remove any player more than LOOKUP_RADIUS m away from us
-
-        self.other_players_list contains a list of tuples for each player, i.e. (ID, x, y)
-        """
-        for player in self.other_players_list:
-            if math.dist((self.pos_x, self.pos_y), (player[1], player[2])) > self.LOOKUP_RADIUS:
-                self.other_players_list.remove(player)
 
 
     def pass_lookup_info(self, other_players, obstacles):
@@ -121,22 +109,14 @@ class Player:
         # otherwise, it doesn't matter, we should pop them out.
 
         # call to update the list of players
-        self._update_players_list()
+        # self._update_players_list()
 
         #if the player ID matches one of the IDs in other_players_list, remove it and add the new once
+
+        # set the dict value based on the player ID
+        # if the player is already in the dict, reassign. works for both new and old players seen
         for player in other_players:
-            # print("WHERE R U PLAYER", player)
-            self.other_players_list.append(player)
-            # for added_players in self.other_players_list:
-            #     if player[0] == added_players[0]:
-            #         print(f'PLAYER in LIST {player[0]}')
-            #         self.other_players_list.remove(added_players)
-            #         self.other_players_list.append(player)
-            #         break
-            #     #if not already in the list
-            #     else:
-            #         print(f'OTHER PLAYER {player[0]}')
-            #         self.other_players_list.append(player)
+            self.other_players_dict[player[0]] = (player[1], player[2])
 
         return
 
@@ -149,10 +129,10 @@ class Player:
             print("EMERGENCY EXIT")
             self.queue.append(self.goal_stall)
             self.queue.popleft()
-            if len(self.queue) > 3:
-                self.goal_stall = self.queue[2]
-            else:
-                self.goal_stall = self.queue[0]
+            # if len(self.queue) > 3:
+            #     self.goal_stall = self.queue[2]
+            # else:
+            self.goal_stall = self.queue[0]
 
         self.field_vision = []
 
@@ -195,28 +175,22 @@ class Player:
 
     def _bounce_off_boundaries(self, x, y):
 
-        # if x < 0 or x > 100:
-        #     self.sign_x *= -1 # Reverse the x-velocity when hitting the horizontal boundaries
-        #
-        # if y < 0 or y > 100:
-        #     self.sign_y *= -1  # Reverse the y-velocity when hitting the vertical boundaries
-
-        if x <= 0:
+        if x < 0:
             self.sign_x = 1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-        if y <= 0:
+        if y < 0:
             self.sign_y = 1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-        if x >= 100:
+        if x > 100:
             self.sign_x = -1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-        if y >= 100:
+        if y > 100:
             self.sign_y = -1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
@@ -429,7 +403,7 @@ class Player:
 
         Args:
             obstacles - list of obstacle tuples (ID, x,y) in the game we know
-            other_players - list of other players' current position tuples (ID, x,y)
+            other_players - dict of other players' current position, i.e. ID: (x,y)
             new_point - the point we are checking for collision
 
         Returns:
@@ -445,17 +419,19 @@ class Player:
 
         for o in obstacles:
             if len(o) > 0:
-                x, y = o[1], o[2]
-                if self._check_collision_obstacle((x, y), new_point):
+                obstacle_coords = o[1], o[2]
+                if self._check_collision_obstacle(obstacle_coords, new_point):
                     self.field_vision.append(o)
                     return False
 
-        for p in other_players:
-            if len(p) > 0:
-                x, y = p[1], p[2]
-                if self._check_collision_obstacle((x, y), new_point):
-                    self.field_vision.append(p)
-                    return False
+        for player_id in other_players.keys():
+            # if len(p) > 0:
+            player_coords = other_players[player_id]
+            if self._check_collision_obstacle(player_coords, new_point):
+                # APPENDING TUPLE IN EXPECTED FORMAT
+                # PLEASE CHANGE IF NEEDED FOR CLARITY
+                self.field_vision.append((player_id, player_coords[0], player_coords[1]))
+                return False
 
 
         return True
@@ -530,7 +506,7 @@ class Player:
         if len(self.queue) > 0:
             #don't pop until we collect it!
             self.goal_stall = self.queue[0]
-            # self.emergency_exit()
+            self.emergency_exit()
 
 
     #########################################################
@@ -563,7 +539,7 @@ class Player:
 
             # if not self.is_rrt_planning:
 
-            if self._is_collision_free(self.obstacles_list, self.other_players_list, goal_point):
+            if self._is_collision_free(self.obstacles_list, self.other_players_dict, goal_point):
                 vx = self.goal_stall.x - self.pos_x
                 vy = self.goal_stall.y - self.pos_y
                 self.sign_x = 1
@@ -588,14 +564,14 @@ class Player:
                 begin = datetime.utcnow()
                 while datetime.utcnow() - begin < self.max_time:
                     new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
-                    if self._is_collision_free(self.obstacles_list, self.other_players_list, new_point):
+                    if self._is_collision_free(self.obstacles_list, self.other_players_dict, new_point):
                         break
 
                 closest_node = self._nearest_node(self.rrt_tree, new_point)
 
                 new_node = self._extend(closest_node, new_point, self.DELTA)
 
-                if self._is_collision_free(self.obstacles_list, self.other_players_list, new_node):
+                if self._is_collision_free(self.obstacles_list, self.other_players_dict, new_node):
                     # print(f'extending to new node {new_node}')
                     # print(f'DISTANCE CURR-NEW NODE {math.dist(self.start_node, new_node)}')
                     self.rrt_tree.append(new_node)
@@ -610,6 +586,8 @@ class Player:
                     self.vy = math.sqrt(1 - self.vx ** 2)
                     self.sign_x *= -1
                     self.sign_y *= -1
+
+                    # self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
                     new_pos_x = self.pos_x + self.sign_x * self.vx
                     new_pos_y = self.pos_y + self.sign_y * self.vy
