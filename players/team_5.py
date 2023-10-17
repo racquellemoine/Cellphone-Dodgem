@@ -4,14 +4,22 @@ import fast_tsp
 import os
 from collections import deque, defaultdict
 from itertools import chain
-from pathfinder import navmesh_baker as nmb
+import rvo2
 
 random.seed(2)
 
 LOOKUP_INTERVAL = 8
-OBSTACLE_HITBOX_SIZE = 2.1
-STALL_HITBOX_SIZE = 2
 DIST_EPS = 1e-5
+
+#RVO Simulator Properties
+TIME_STEP = 1
+NEIGHBOR_DIST = 8
+MAX_NEIGHBORS = 6
+TIME_HORIZON = 1
+TIME_HORIZON_OBS = 2
+RADIUS = 0.5
+MAX_SPEED = 1
+DEF_VELO = (0, 0)
 
 class Point():
     def __init__(self, x, y):
@@ -51,15 +59,19 @@ class Player:
         self.__init_tsp()
         self.__init_queue()
 
+        # init rvo and environment boundary
+        self.sim = None
+        self.agent = None
+        self.agent_q = deque()
+        self.agent_id = dict()
+        self.prev_pos = dict()
+        self.__init_rvo()         
+
         # local avoidance
         self.lookup_timer = LOOKUP_INTERVAL
         self.path = deque()
         self.collision = 0
         self.is_alert = False
-
-        # navmesh
-        self.baker = nmb.NavmeshBaker()
-        self.__init_nm()
         self.seen_obs = set()
 
     def __init_queue(self):
@@ -85,28 +97,22 @@ class Player:
                 
         self.tsp_path = fast_tsp.find_tour(self.dists) if n > 1 else [0, 1]
 
-    def __init_nm(self):
-        self.baker.add_geometry([(0.0, 0.0, 0.0),
-                                 (0.0, 0.0, 50.0),
-                                 (50.0, 0.0, 50.0),
-                                 (50.0, 0.0, 0.0)],
-                                [[0, 1, 2, 3]])
-        is_bake = self.baker.bake(cell_size=1.0,
-                                  cell_height=1.0,
-                                  agent_height=0.0,
-                                  agent_radius=0.5,
-                                  agent_max_climb=0.0,
-                                  region_min_size=1,
-                                  region_merge_size=20,
-                                  verts_per_poly=4,
-                                  edge_max_len=70.8)
-        if is_bake:
-            verts, polys = self.baker.get_polygonization()
-            print(verts)
-            print(polys)
-            self.baker.save_to_text("nmfiles/init_nm.txt")
-        else:
-            print("Failed to bake navmesh")
+    def __init_rvo(self):
+        self.sim = rvo2.PyRVOSimulator(TIME_STEP,
+                                       NEIGHBOR_DIST,
+                                       MAX_NEIGHBORS,
+                                       TIME_HORIZON,
+                                       TIME_HORIZON_OBS,
+                                       RADIUS,
+                                       MAX_SPEED,
+                                       DEF_VELO)
+        # environment bound
+        self.sim.addObstacle([(0.0, 0.0),
+                              (0.0, 100.0),
+                              (100.0, 100.0),
+                              (100.0, 0.0)])
+        # self
+        self.agent = self.sim.addAgent((self.pos_x, self.pos_y))
 
     @staticmethod
     def __calc_distance(x1, y1, x2, y2):
@@ -120,24 +126,13 @@ class Player:
 
     @staticmethod
     def __build_poly(o_x, o_y):
-        verts = []
-        verts.append((o_x - 0.5, 0.0, o_y - 0.5))
-        verts.append((o_x - 0.5, 0.0, o_y + 0.5))
-        verts.append((o_x + 0.5, 0.0, o_y + 0.5))
-        verts.append((o_x + 0.5, 0.0, o_y - 0.5))
-        verts.append((o_x - 0.5, 1.0, o_y - 0.5))
-        verts.append((o_x - 0.5, 1.0, o_y + 0.5))
-        verts.append((o_x + 0.5, 1.0, o_y + 0.5))
-        verts.append((o_x + 0.5, 1.0, o_y - 0.5))
+        poly = []
+        poly.append((o_x - 1.1, o_y - 1.1))
+        poly.append((o_x + 1.1, o_y - 1.1))
+        poly.append((o_x + 1.1, o_y + 1.1))
+        poly.append((o_x - 1.1, o_y + 1.1))
 
-        polys = [[0, 3, 2, 1], 
-                 [2, 6, 5, 1], 
-                 [4, 5, 6, 7], 
-                 [0, 4, 7, 3], 
-                 [2, 3, 7, 6], 
-                 [0, 1, 5, 4]]
-
-        return verts, polys
+        return poly
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
@@ -154,36 +149,69 @@ class Player:
                     break
             self.q.remove(r)
 
+    def __kill_agent(self, aid):
+        sim = self.sim
+
+        sim.setAgentPosition(aid, (-1, -1))
+        sim.setAgentPrefVelocity(aid, DEF_VELO)
+        sim.setAgentVelocity(aid, DEF_VELO)
+        sim.setAgentNeighborDist(aid, 0)
+        sim.setAgentMaxNeighbors(aid, 0)
+
+
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
         seen = self.seen_obs
+        sim = self.sim
 
-        f_bake = False
         for oid, ox, oy in obstacles:
             if oid not in seen:
                 seen.add(oid)
-                v, p = Player.__build_poly(ox, oy)
-                self.baker.add_geometry(v, p)
-                f_bake = True
+                sim.addObstacle(Player.__build_poly(ox, oy))
 
-        if f_bake:
-            is_bake = self.baker.bake()
-            if is_bake:
-                    verts, polys = self.baker.get_polygonization()
-                    print(verts)
-                    print(polys)
-                    self.baker.save_to_text("nmfiles/init_nm.txt")
+        sim.processObstacles()
+
+        killed = []
+        for pid in self.agent_id:
+            if pid not in (p for p, _, _ in other_players):
+                aid = self.agent_id[pid]
+                self.__kill_agent(aid)
+                self.agent_q.append(aid)
+                killed.append(pid)
+        for k in killed:
+            self.agent_id.pop(pid, -1)
+
+        for pid, px, py in other_players:
+            if pid in self.agent_id:
+                aid = self.agent_id[pid]
+                prevx, prevy = self.prev_pos[pid]
+                pv = (px - prevx, py - prevy)
+                if sim.getAgentPrefVelocity(aid) == DEF_VELO:
+                    sim.setAgentPrefVelocity(aid, pv)
+                sim.setAgentPosition(aid, (px, py))
+                sim.setAgentVelocity(aid, pv)
+                self.prev_pos[pid] = (px, py)
             else:
-                print("Failed to bake navmesh")
+                if self.agent_q:
+                    aid = self.agent_q.popleft()
+                    sim.setAgentPosition(aid, (px, py))
+                    sim.setAgentNeighborDist(aid, NEIGHBOR_DIST)
+                    sim.setAgentMaxNeighbors(aid, MAX_NEIGHBORS)
+                else:
+                    aid = sim.addAgent((px, py))
+                self.agent_id[pid] = aid
+                sim.setAgentPrefVelocity(aid, DEF_VELO)
+                sim.setAgentVelocity(aid, DEF_VELO)
+                self.prev_pos[pid] = (px, py)
+
+        self.is_alert =  sim.getAgentNumAgentNeighbors(self.agent)
 
     def __update_path(self):
-        self.path.clear()
-        s = Point(self.pos_x, self.pos_y)
+        if self.path:
+            self.path.popleft()
         t = Point(self.q[0].x, self.q[0].y)
-        new_path = [s, t]
-        for p in new_path[1:]:
-            self.path.append(p)
+        self.path.append(t)
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
@@ -200,6 +228,7 @@ class Player:
         
         self.pos_x = pos_x
         self.pos_y = pos_y
+        self.sim.setAgentPosition(self.agent, (pos_x, pos_y))
         
         if len(self.q) == 0:
             return 'move'
@@ -230,15 +259,19 @@ class Player:
             self.collision -= 1
             if self.collision == 0 and len(self.q) > 0:
                 self.__update_path()
+
         elif len(self.q) > 0:
             t = self.path[0]
             vx = t.x - self.pos_x
             vy = t.y - self.pos_y
+            self.sim.setAgentPrefVelocity(self.agent, (vx, vy))
             self.sign_x = 1
             self.sign_y = 1
-            self.vx, self.vy = list(Player.__normalize(vx, vy)) \
-                                if Player.__calc_distance(vx, vy, 0, 0) > 1 \
-                                else [vx, vy] 
+            self.sim.doStep()
+            self.vx, self.vy = self.sim.getAgentVelocity(self.agent)
+            #print(f"{self.q[0].id} : {self.vx}, {self.vy}")
+            #print("pos: ", self.pos_x, self.pos_y)
+            #print("sim pos: ", self.sim.getAgentPosition(self.agent))
         elif len(self.q) == 0:
             self.vx, self.vy = 0, 0
 
