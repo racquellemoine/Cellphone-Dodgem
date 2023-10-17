@@ -60,6 +60,8 @@ class Player:
         self.rrt_tree = []
         self.collided = False
 
+        self.collision_counter = 0
+
     # simulator calls this function when the player collects an item from a stall
 
     def set_queue(self):
@@ -149,10 +151,10 @@ class Player:
             print("EMERGENCY EXIT")
             self.queue.append(self.goal_stall)
             self.queue.popleft()
-            if len(self.queue) > 3:
-                self.goal_stall = self.queue[2]
-            else:
-                self.goal_stall = self.queue[0]
+           # if len(self.queue) > 3:
+              #  self.goal_stall = self.queue[2]
+           # else:
+            self.goal_stall = self.queue[0]
 
         self.field_vision = []
 
@@ -163,7 +165,7 @@ class Player:
         print('Encountered obstacle')
 
         self.collided = True
-
+        self.collision_counter += 1
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
         self.sign_x *= -1
@@ -530,7 +532,7 @@ class Player:
         if len(self.queue) > 0:
             #don't pop until we collect it!
             self.goal_stall = self.queue[0]
-            # self.emergency_exit()
+            self.emergency_exit()
 
 
     #########################################################
@@ -558,6 +560,19 @@ class Player:
             # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
 
         if self.goal_stall:
+
+            if self.collision_counter >=3:
+                self.vx = random.random()
+                self.vy = math.sqrt(1 - self.vx ** 2)
+                self.sign_x *= -1
+                self.sign_y *= -1
+
+                new_pos_x = self.pos_x + self.sign_x * self.vx
+                new_pos_y = self.pos_y + self.sign_y * self.vy
+
+
+                return new_pos_x, new_pos_y
+
 
             goal_point = self.goal_stall.x, self.goal_stall.y
 
