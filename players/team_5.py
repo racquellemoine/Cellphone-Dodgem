@@ -60,6 +60,7 @@ class Player:
         # navmesh
         self.baker = nmb.NavmeshBaker()
         self.__init_nm()
+        self.seen_obs = set()
 
     def __init_queue(self):
         stv = self.stalls_to_visit
@@ -87,16 +88,21 @@ class Player:
     def __init_nm(self):
         self.baker.add_geometry([(0.0, 0.0, 0.0),
                                  (0.0, 0.0, 100.0),
-                                 (100.0, 0.0, 0.0),
-                                 (100.0, 0.0, 100.0)],
+                                 (100.0, 0.0, 100.0),
+                                 (100.0, 0.0, 0.0)],
                                 [[0, 1, 2, 3]])
-        is_bake = self.baker.bake(agent_height=0.0,
+        is_bake = self.baker.bake(cell_size=1.0,
+                                  cell_height=1.0,
+                                  agent_height=0.0,
                                   agent_radius=0.5,
                                   agent_max_climb=0.0,
-                                  verts_per_poly=4)
+                                  verts_per_poly=3,
+                                  edge_max_len=142.0)
         if is_bake:
             verts, polys = self.baker.get_polygonization()
-            self.baker.save_to_text("init_nm.txt")
+            print(verts)
+            print(polys)
+            self.baker.save_to_text("nmfiles/init_nm.txt")
         else:
             print("Failed to bake navmesh")
 
@@ -110,6 +116,26 @@ class Player:
 
         return vx / norm, vy / norm
 
+    @staticmethod
+    def __build_poly(o_x, o_y):
+        verts = []
+        verts.append((o_x - 1, 0.0, o_y - 1))
+        verts.append((o_x - 1, 0.0, o_y + 1))
+        verts.append((o_x + 1, 0.0, o_y + 1))
+        verts.append((o_x + 1, 0.0, o_y - 1))
+        verts.append((o_x - 1, 1.0, o_y - 1))
+        verts.append((o_x - 1, 1.0, o_y + 1))
+        verts.append((o_x + 1, 1.0, o_y + 1))
+        verts.append((o_x + 1, 1.0, o_y - 1))
+
+        polys = [[0, 3, 2, 1], 
+                 [2, 6, 5, 1], 
+                 [4, 5, 6, 7], 
+                 [0, 4, 7, 3], 
+                 [2, 3, 7, 6], 
+                 [0, 1, 5, 4]]
+
+        return verts, polys
 
     # simulator calls this function when the player collects an item from a stall
     def collect_item(self, stall_id):
@@ -129,8 +155,26 @@ class Player:
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        pass
-    
+        seen = self.seen_obs
+
+        f_bake = False
+        for oid, ox, oy in obstacles:
+            if oid not in seen:
+                seen.add(oid)
+                v, p = Player.__build_poly(ox, oy)
+                self.baker.add_geometry(v, p)
+                f_bake = True
+
+        if f_bake:
+            is_bake = self.baker.bake()
+            if is_bake:
+                    verts, polys = self.baker.get_polygonization()
+                    print(verts)
+                    print(polys)
+                    self.baker.save_to_text("nmfiles/init_nm.txt")
+            else:
+                print("Failed to bake navmesh")
+
     def __update_path(self):
         self.path.clear()
         s = Point(self.pos_x, self.pos_y)
