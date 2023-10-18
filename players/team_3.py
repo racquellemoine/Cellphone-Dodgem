@@ -1,6 +1,10 @@
 import math
 import random
 random.seed(2)
+import fast_tsp
+import queue    
+from collections import deque
+from itertools import chain
 
 class Player:
     def __init__(self, id, name, color, initial_pos_x, initial_pos_y, stalls_to_visit, T_theta, tsp_path, num_players):
@@ -13,6 +17,10 @@ class Player:
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
+        self.num_stalls = len(stalls_to_visit)
+        self.hasHitObstacle = {}
+        for stall in range(self.num_stalls): self.hasHitObstacle[stall] = 0
+
 
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
@@ -20,249 +28,250 @@ class Player:
         self.sign_x = 1
         self.sign_y = 1
 
-        #wall boundaries for wall following algorithm 
-        self.rightLimit = 100 
-        self.leftLimit = 0 
-        self.upperLimit = 0 
-        self.lowerLimit = 100
+        ###TSP Implementation from team 5's first implementation###
 
-        self.lookup_counter = 0 #start by looking up 
+        #initiating dist as a 2D list with zeros to store distance points
+        self.dists = [[0 for _ in range(self.num_stalls + 1)] for _ in range(self.num_stalls + 1)]
+        self.q = deque() # stores the path or the sequence of stalls a player will visist
 
-        #initialize an empty board-> with 1's
-        self.playing_field = [[2 for i in range(100)] for j in range(100)]
-        self.time_since_last_lookup = 0 # need to figure out how to best keep track of this guy 
+        self.tsp()
+        self.path_queue()
+        self.encounter_obs = False
+        self.obstacle_queue = []
         self.obstacle_movement_queue = []
-        self.tsp_queue = []
-        #r,c represents x,y coordinates
-        #2 indicates unexplored
-        #3 indicates explored bt unvisiited stall
-        #1 indicates visited stall
-        #0 indicates space explored - (not a stall or obstacle)
-        #-1 indicates an obstacle 
+        self.obstacles = []
+        self.lookup_counter = 0
+        self.playing_field = [[2 for i in range(100)] for j in range(100)]
 
+    def path_queue(self):
+        stv = self.stalls_to_visit
+        tsp = self.tsp_path
 
-        #keep track of current walking direction 
-        #we want to walk counter clockwise
-        print("starting at: ", self.pos_x, self.pos_y) 
-        if self.pos_x == self.rightLimit: 
-            self.walkingDirection = "back track left"
-        if self.pos_y == self.upperLimit: 
-            self.walkingDirection = "back track down"
-        if self.pos_x == self.leftLimit:
-            self.walkingDirection = "back track right"
-        if self.pos_y == self.lowerLimit: 
-            self.walkingDirection = "back track up"
+        if self.num_stalls > 14: #sweet number for when the stalls are on the right order otherwise it shows reverse path
+            for i in tsp[1:]:
+                self.q.append(stv[i-1])
+        else:
+            for i in tsp[::-1]:
+                stall = stv[i - 1]
+                if stall not in self.q:
+                    self.q.append(stv[i-1])
+    def tsp(self):
+        '''Calculates the Traveling Salesman Problem (TSP) path for the player, which is a sequence of stalls to visit in the optimal order.'''
+        stv = self.stalls_to_visit
+        n = self.num_stalls
+        x,y = self.pos_x, self.pos_y
+        for i in range(0, n):
+            d = self.calc_distance(x, y, stv[i].x, stv[i].y)
+            self.dists[0][i+1] = math.ceil(d)
 
-    # simulator calls this function when the player collects an item from a stall
-    def collect_item(self, stall_id):
-        #remove stall_id from stalls_to_visit 
-        if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
-        #remove stall_id from stalls_to_visit 
-        if stall_id in self.stalls_to_visit: self.stalls_to_visit.remove(stall_id)
+        for i in range(0, n):
+            for j in range(0, n):
+                d = self.calc_distance(stv[i].x, stv[i].y, stv[j].x, stv[j].y)
+                self.dists[i+1][j+1] = math.ceil(d)
+        self.tsp_path = fast_tsp.find_tour(self.dists)
 
-    # simulator calls this function when it passes the lookup information
+    def calc_distance(self, x1, y1, x2, y2):
+        '''calculates the Euclidean distance between two points (x1, y1) and (x2, y2)'''
+        return math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+    
+    def normalize(self, vx, vy):
+        '''normalize a vector given its components vx and vy to create a unit vector.'''
+        norm = self.calc_distance(vx, vy, 0, 0)
+        return vx / norm, vy / norm
+
+     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
     def pass_lookup_info(self, other_players, obstacles):
-        #given where an obstacle is, can dictate movements 
-        #given coordinates of obstacles and other players 
-
-        #for obstacles, update their positions to be -1 
-        #format of obstacles? 
         for o in obstacles: 
-            x_pos,y_pos = int(o[1]), int(o[2])
-            self.playing_field[x_pos][y_pos] = -1 
+            self.obstacles.append(o)
+            x_pos,y_pos = o[1], o[2]
+            #print("checking if obstacle ", o[0], " is on path")
+            if self.obstacle_on_path(x_pos, y_pos) and o not in self.obstacle_queue:
+                self.obstacle_queue.append(o)
+                #print("This Obstacle is on the way:", {o[0]}, " at ", {o[1], o[2]})
+                self.encounter_obstacle()
+    
+    def obstacle_on_path(self, obstacle_x, obstacle_y):
+        x1, y1 = self.pos_x, self.pos_y 
+        closest_stall = self.q[0]
+        #print("checking obstacle on path to stall ", closest_stall.id)
+        x2 = closest_stall.x
+        y2 = closest_stall.y
+        return self.is_point_on_line(obstacle_x, obstacle_y, x1, y1, x2, y2)
 
+    def is_point_on_line(self, x, y, x1, y1, x2, y2):
+        """Check if the point (x, y) lies on the line segment between (x1, y1) and (x2, y2)."""
+        #if min(x1, x2) <= x <= max(x1, x2) and min(y1, y2) <= y <= max(y1, y2):
+            # The point (x, y) is within the bounding box of the line segment
+            # Check if it's collinear with the line segment
+            #return True
+        path = int(self.calc_distance(x1, y1, x2, y2))
+        distance1 = self.calc_distance(x1, y1, x, y)
+        distance2 = self.calc_distance(x,y, x2, y2)
+        sum = distance1+distance2
+        #print("sum: ", sum)
+        #print("path: ", path)
+        onLine = sum > path-1 and sum < path+2
+        return onLine
+        
+    # simulator calls this function when the player collects an item from a stall
+    def collect_item(self, stall_id):
 
-    def detect_obstacle(self,x_range,y_range): #add a queue of movements to perform 
-        for x in x_range:
-            for y in y_range:
-                self.playing_field[x][y] = -1 
-        #so the spots have been identified, now perform movement directions 
-        if self.walkingDirection == "right":
-            self.obstacle_movement_queue = ["down","down","right","right","up","up","right","right"]
-        if self.walkingDirection == "left":
-            self.obstacle_movement_queue = ["up","up","left","left","down","down","left","left"]
-        if self.walkingDirection == "up":
-            self.obstacle_movement_queue = ["right","right","up","up","left","left","up","up"]   
-        if self.walkingDirection == "down":
-            self.obstacle_movement_queue = ["left","left","down","down","right","right","down","down"]
+        '''It checks if the item collected matches the stall at the front of the queue (q[0]). If so, 
+            it removes that stall from the queue.If the collected item does not match the stall at the 
+            front of the queue, it iterates through the queue to find and remove the matching stall.'''
+        #print("length of queue is " + str(len(self.q)))
+        if stall_id == self.q[0].id:
+            self.q.popleft()
+        else:
+            #temp_length = len(self.q)
+            #count = 0
+            #while count < temp_length
+            copy_deque = self.q.copy()
+            for s in copy_deque:
+                if stall_id == s.id:
+                    self.q.remove(s)
+                    break            
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.playing_field[self.pos_x][self.pos_y] = -1 #butn need a way to tell if it is a player? 
-        #self.vx = random.random()
-        #self.vy = math.sqrt(1 - self.vx**2)
-        #self.sign_x *= -1
-        #self.sign_y *= -1
-        print("obstacle hit")
-        #self.pos_x = 0
-        #self.pos_y = 0
-        #return self.pos_x, self.pos_y
-        if self.walkingDirection == "right" or "back track right":
-            print("switching down")
-            #self.walkingDirection = "back"
-            self.walkingDirection = "down"
-            return self.pos_x, self.pos_y
-        if self.walkingDirection == "down" or "back track down":
-            #self.walkingDirection = "left"
-            self.walkingDirection = "left"
-            return self.pos_x, self.pos_y
-        if self.walkingDirection == "left" or "back track left":
-            #self.walkingDirection = "up"
-            self.walkingDirection = "up"
-            return self.pos_x, self.pos_y
-        if self.walkingDirection == "up" or "back track up":
-            #self.walkingDirection = "right"
-            self.walkingDirection = "right"
-            return self.pos_x, self.pos_y
-        random_number = random.randint(1, 4)
-        if random_number == 1:
-            self.walkingDirection = "down" #ok so this works 
-        if random_number == 2:
-            self.walkingDirection = "up" 
-        if random_number == 3:
-            self.walkingDirection = "right" 
-        if random_number == 4:
-            self.walkingDirection = "left" 
-        #i think because we created var walkingdirection it cannot detect the direction that it is going -> so just sets as default 
-        print("new direction: " + self.walkingDirection)
-        
+        # find points on circle
+        # travel to this point if there is no obstacle on path
+        # any points on circle can be found by degrees w/ formulas
+        # x=rsin(a), y=rcos(a) where r is radius and a is angle
+        #print("in encounter obstacle")
+        #print("currently at ", [self.pos_x, self.pos_y])
+        if len(self.obstacle_queue) == 0: 
+            #print("obstacle queue is empty")
+            return
+        obstacle = self.obstacle_queue[0]
+        if obstacle[0] in self.hasHitObstacle:
+            self.hasHitObstacle[obstacle[0]] = self.hasHitObstacle[obstacle[0]] + 1
+            #print("has hit obstacle ", self.hasHitObstacle[obstacle[0]], " times")
+        else:
+            self.hasHitObstacle[obstacle[0]] = 1
+        #print("trying to avoid obstacle ", obstacle[0])
+        angles = []
+        for angle in range(0, 360):
+            angles.append(angle)
+        for angle in range(0, 360):
+            if self.hasHitObstacle[obstacle[0]] > 10:
+                angle = random.choice(angles)
+            angles.remove(angle)
+            #print("trying angle ", angle)
+            #print("checking angle ", angle)
+            originX = 5*math.sin(angle)
+            originY = 5*math.cos(angle)
+            x = originX+self.pos_x
+            y = originY+self.pos_y
+            if self.is_point_on_line(obstacle[1], obstacle[2], self.pos_x, self.pos_y, x, y):
+                #print("obstacle on line")
+                continue
+            if (x >= obstacle[1]-1.5 and x <= obstacle[1]+1.5) and (y >= obstacle[2]-1.5 and y<=obstacle[2]+1.5): 
+                #print("direction is too close")
+                continue
+            vx = x - self.pos_x
+            vy = x - self.pos_y
+            self.vx, self.vy = self.normalize(vx, vy)
+            new_pos_x = self.pos_x + self.sign_x * self.vx
+            new_pos_y = self.pos_y + self.sign_y * self.vy
+            #print("checking position ", [new_pos_x, new_pos_y])
+            #print("obstacle ", obstacle[0], " is at ", [obstacle[1], obstacle[2]])
+            if abs(new_pos_x - obstacle[1]) <=1 and abs(new_pos_y - obstacle[2]) <= 1: 
+                #print("direction too close")
+                continue
+            if x > 99: x = 99
+            if y > 99: y = 99
+            if x < 1: x = 1
+            if y < 1: y = 1
+            for obstacle in self.obstacle_queue:
+                if self.is_point_on_line(obstacle[1], obstacle[2], self.pos_x, self.pos_y, x, y):
+                    #print('other obstacle interferes')
+                    continue
+            #print("move to ", [int(x),int(y)], " obstacle not on line")
+            self.obstacle_movement_queue.append([int(x),int(y)])
+            break
+        self.obstacle_queue.remove(obstacle)
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
-        # return 'lookup' or 'move'
+        # return 'lookup' or 'move' or 'lookup move'
         
+        #self.pos_x = pos_x
+        #self.pos_y = pos_y
+
         self.pos_x = pos_x
         self.pos_y = pos_y
-
-        if self.pos_x <=1 or self.pos_x >=99:
+        if pos_x >=99 or pos_x <=1:
             return 'move'
-        if self.pos_y <=1 or self.pos_y >=99:
+        if pos_y >=99 or pos_y <=1:
             return 'move'
-            
         
         if self.lookup_counter == 0:
             self.lookup_counter = 10
             return 'lookup'
         self.lookup_counter -= 1 #subtract one 
 
+        #return 'move'
+        
         return 'move'
-
-        #when do we want to lookup 
     
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
-        #we want to snake board, explore in a spiral, idea of following the wall 
-
-        print("\nupperLimit: ", self.upperLimit)
-        print("lowerLimit: ", self.lowerLimit)
-        print("leftLimit: ", self.leftLimit)
-        print("rightLimit: ", self.rightLimit)
-        print("currently at: ", self.pos_x, ", ", self.pos_y)
-        #within 10 steps of right boundary while walking right 
-
-        #see if queue is not, empty -> if not empty, perform those movements 
+        #print("entering move")
+        #print(len(self.obstacle_movement_queue))
+        #print("next stall ", self.q[0].id)
+        possiblePoints = [[math.floor(self.pos_x), math.floor(self.pos_y)], [math.ceil(self.pos_x), math.ceil(self.pos_y)], [math.ceil(self.pos_x), math.floor(self.pos_y)], [math.floor(self.pos_x), math.ceil(self.pos_y)] ]
+        for point in possiblePoints:
+            if point in self.obstacle_movement_queue:
+                self.obstacle_movement_queue.remove(point)
+                #print("removing current pos from obstacle movement queue")
+                break
+        new_pos_x = None
+        new_pos_y = None
         if self.obstacle_movement_queue != []:
-            #perform these measures 
-            cur_walk_dir = self.obstacle_movement_queue.pop(0)
-            self.walkingDirection = cur_walk_dir
-        nextMove = self.walkingDirection
-            
-        if nextMove == "up": new_pos_x, new_pos_y = self.__walkingUp()
-        if nextMove == "down": new_pos_x, new_pos_y = self.__walkingDown()
-        if nextMove == "right": new_pos_x, new_pos_y = self.__walkingRight()
-        if nextMove == "left": new_pos_x, new_pos_y = self.__walkingLeft()
+            #print("obstacle movement queue not empty")
+            #print("currently at ", [self.pos_x, self.pos_y])
+            next_move = self.obstacle_movement_queue.copy().pop()
+            #print(next_move)
+            #print("calc vector to move in direction ", next_move[0], ", ", next_move[1])
+            vx = next_move[0] - self.pos_x
+            vy = next_move[1] - self.pos_y
+            #print("vectors: ", [vx, vy])
+            self.vx, self.vy = self.normalize(vx, vy)
+        else: 
+            for o in self.obstacles:
+                if self.obstacle_on_path(o[1], o[2]) and o not in self.obstacle_queue:
+                    print("obstacle ", o[0], " on path and not in queue")
+                    self.obstacle_queue.append(o)
+                    self.encounter_obstacle()
+                    break
+            for o in self.obstacles:
+                if self.obstacle_on_path(o[1], o[2]) and o not in self.obstacle_queue:
+                    print("obstacle ", o[0], " on path and not in queue")
+                    #print("obstacle ", o[0], " on path at ", [o[1], o[2]])
+                    #print("currently at ", [self.pos_x, self.pos_y])
+                    self.obstacle_queue.append(o)
+                    self.encounter_obstacle()
+                    break
+        if self.obstacle_movement_queue == []:
+            '''updates the player's velocity vector based on the next stall to visit. If there are still stalls in the queue (self.q), 
+                the player's velocity is adjusted to move toward the first stall in the queue in a way that maintains a constant speed.'''
+            if (len(self.q) > 0):
+                vx = self.q[0].x - self.pos_x
+                vy = self.q[0].y - self.pos_y
 
-        if self.walkingDirection == "back track up": new_pos_x, new_pos_y = self.__backTrackingUp()
-        if self.walkingDirection == "back track down": new_pos_x, new_pos_y = self.__backTrackingDown()
-        if self.walkingDirection == "back track right": new_pos_x, new_pos_y = self.__backTrackingRight()
-        if self.walkingDirection == "back track left": new_pos_x, new_pos_y = self.__backTrackingLeft()
-
-        #no more board left to explore 
-        if self.lowerLimit <= self.upperLimit and self.leftLimit >= self.rightLimit:  
-            print("no more board left")
-            #return self.pos_x, self.pos_y
-
-        #if self.playing_field[new_pos_x][new_pos_y] == -1: 
-            #self.detect_obstacle(x_range, y_range)
-            #return self.pos_x, self.pos_y
-
+                self.vx, self.vy = self.normalize(vx, vy)
+        if new_pos_x is None or new_pos_y is None:
+            new_pos_x = self.pos_x + self.sign_x * self.vx
+            new_pos_y = self.pos_y + self.sign_y * self.vy
+            #print("new x and y positions:")
+            #print(new_pos_x)
+            #print(new_pos_y)
+            self.pos_x = new_pos_x
+            self.pos_y = new_pos_y
+            #print(self.pos_x)
+            #print(self.pos_y)
+        self.obstacle_queue = []
         return new_pos_x, new_pos_y
-    
-    def __walkingUp(self): 
-        print("walking up")
-        #within 10 steps of upper bound
-        if self.pos_y <= self.upperLimit+10: 
-            #move boundary 10 steps down
-            print("walking up and approached limit")
-            self.upperLimit += 10
-            self.walkingDirection = "back track down"
-            return self.pos_x, self.pos_y+1
-        #continue walking up
-        return self.pos_x, self.pos_y-1
-    
-
-    def __walkingDown(self): 
-        print("walking down")
-        #within 10 steps of lower bound 
-        if self.pos_y  >= self.lowerLimit-10:
-            print("walking down and approached limit")
-            #move boundary 10 steps up from limit
-            self.lowerLimit -= 10
-            self.walkingDirection = "back track up"
-            return self.pos_x, self.pos_y-1
-        #continue walking down
-        return self.pos_x, self.pos_y+1
-    
-    def __walkingRight(self): 
-        print("walking right")
-        #within 10 steps of right bound
-        if self.pos_x >= self.rightLimit-10:
-            print("walking right and approached limit")
-            #move boundary 10 steps left 
-            self.rightLimit -= 10
-            self.walkingDirection = "back track left"
-            return self.pos_x-1, self.pos_y
-        #continue walking right
-        return self.pos_x+1, self.pos_y
-    
-    def __walkingLeft(self):
-        print("walking left")
-        #within 10 steps of left bound
-        if self.pos_x <= self.leftLimit+10:
-            print("walking left and approached limit")
-            #move boundary 10 steps right
-            self.leftLimit += 10
-            self.walkingDirection = "back track right"
-            return self.pos_x+1, self.pos_y
-        #continue walking left
-        return self.pos_x-1, self.pos_y
-    
-    def __backTrackingUp(self):
-        print("back tracking up")
-        #we are 10 steps above lower limit
-        if self.pos_y == self.lowerLimit-9:
-            self.walkingDirection = "right"
-        return self.pos_x, self.pos_y-1
-
-    def __backTrackingDown(self):
-        print("back tracking down")
-        #we are 10 steps below upper limit
-        if self.pos_y == self.upperLimit+9:
-            self.walkingDirection == "left"
-        return self.pos_x, self.pos_y+1
-    
-    def __backTrackingRight(self):
-        print("back tracking right")
-        #we are 10 steps left from left limit
-        if self.pos_x == self.leftLimit+9:
-            self.walkingDirection = "down"
-        return self.pos_x+1, self.pos_y
-    
-    def __backTrackingLeft(self):
-        print("back tracking left")
-        #we are 10 steps left from right limit
-        if self.pos_x == self.rightLimit-9: 
-            self.walkingDirection = "up"
-        return self.pos_x-1, self.pos_y
