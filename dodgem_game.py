@@ -482,8 +482,8 @@ class DodgemGame(tk.Tk):
         if self.check_collision(c4x, c4y, c4x, c4y, p_x, p_y, new_p_x, new_p_y):
             return True
         
-        if self.compute_distance(c1x, c1y, p_x, p_y) <= 1 or self.compute_distance(c2x, c2y, p_x, p_y) < 1 or \
-            self.compute_distance(c3x, c3y, p_x, p_y) < 1 or self.compute_distance(c4x, c4y, p_x, p_y) < 1:
+        if self.compute_distance(c1x, c1y, p_x, p_y) <= 1 or self.compute_distance(c2x, c2y, p_x, p_y) <= 1 or \
+            self.compute_distance(c3x, c3y, p_x, p_y) <= 1 or self.compute_distance(c4x, c4y, p_x, p_y) <= 1:
             return True
         
         return False
