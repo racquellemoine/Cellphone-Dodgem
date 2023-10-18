@@ -30,14 +30,6 @@ class Vector:
         other_d = other.dist2stall(other.stall)
         return (self_d + self.dist) < (other_d + other.dist)
     
-    def out_of_obstacle(self, obstacle) -> bool:
-        """Whether the vector is outside of the obstacle."""
-        if abs(self.x - obstacle.x)<=1:
-            return abs(self.y - obstacle.y)>1+DANGER_ZONE
-        if abs(self.y - obstacle.y)<=1:
-            return abs(self.x - obstacle.x)>1+DANGER_ZONE
-        return self.dist2stall(obstacle) > DANGER_ZONE
-
     def dist2stall(self, stall):
         """Shortest distance to a corner of the stall"""
         return min(self.dist2(Vector(stall.x+1, stall.y+1)), self.dist2(Vector(stall.x-1, stall.y+1)), self.dist2(Vector(stall.x-1, stall.y-1)), self.dist2(Vector(stall.x+1, stall.y-1)))
@@ -205,14 +197,10 @@ class Player:
                 newvec =  Vector(vector.x+d.x, vector.y+d.y, vector, stall, vector.dist + 1)
                 fruitful = (newvec.dist2stall(stall) < 1)
                 if newvec.x>0 and newvec.x<WALL_BOUNDARY and \
-                    newvec.y>0 and newvec.y<WALL_BOUNDARY:
-                        if fruitful:
-                            if all(newvec.out_of_obstacle(obstacle) for obstacle in self.obstacles_known) and \
-                                all(newvec.dist2(player) > DANGER_ZONE for player in self.players_cached):
-                                newvecs.append(newvec)
-                        elif all(newvec.dist2(obstacle) > DANGER_ZONE+1.75 for obstacle in self.obstacles_known) and \
-                            all(newvec.dist2(player) > 2*DANGER_ZONE+1 for player in self.players_cached):
-                            newvecs.append(newvec)
+                    newvec.y>0 and newvec.y<WALL_BOUNDARY and \
+                    all(newvec.dist2(obstacle) > DANGER_ZONE+1.75 for obstacle in self.obstacles_known) and \
+                    all(newvec.dist2(player) > (DANGER_ZONE if fruitful else 2*DANGER_ZONE+2) for player in self.players_cached):
+                    newvecs.append(newvec)
             return newvecs
         
         #get the path of vectors chosen by a* search
@@ -325,7 +313,7 @@ class Player:
 
         if self.should_lookup \
             or self.pos.dist2(self.pos_last_lkp) >= (HORIZON-2* DANGER_ZONE)/2 \
-            or any(self.pos.dist2(player) <= 2*(DANGER_ZONE+1) + self.t_since_lkp for player in self.players_cached):
+            or any(self.pos.dist2(player) <= 2*(DANGER_ZONE+2) + self.t_since_lkp for player in self.players_cached):
             self.pos_last_lkp.update_val(self.pos)
             return 'lookup move'
         
