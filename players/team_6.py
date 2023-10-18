@@ -3,7 +3,7 @@ from queue import Queue
 from queue import PriorityQueue
 from sys import maxsize as INT_MAX
 
-random.seed(2)
+random.seed(2023)
 
 HORIZON = 10 # how far we can look
 DANGER_ZONE = 0.5 # how close we can get to an obstacle/person
@@ -188,12 +188,12 @@ class Player:
     #main a* search algorithm that finds the best path around obstacle
     def __update_astar(self):
         #returns 12 directional vectors, each seperated by 30 degrees, that are possible moves from the current vector
+        unitvec = self.__randunit()
+        N = 6
+        ds = [unitvec.rotate(theta*2*math.pi/N) for theta in range(N)]
         def aStar_expand(vector, stall):
             newvecs = list()
-            unitvec = self.__randunit()
-            N = 6
-            for theta in range(N):
-                d = unitvec.rotate(theta*2*math.pi/N)
+            for d in ds:
                 newvec =  Vector(vector.x+d.x, vector.y+d.y, vector, stall, vector.dist + 1)
                 fruitful = (newvec.dist2stall(stall) < 1)
                 if newvec.x>0 and newvec.x<WALL_BOUNDARY and \
