@@ -31,6 +31,8 @@ class Player:
         self.collision_turn = -100
 
         self.is_crowded = None
+        self.to_check_crowd = None
+
         self.last_lookup_pos = (None, None)
 
         # set the lookup frequency that is dependent on the number of players in the game
@@ -147,6 +149,14 @@ class Player:
             self.obstacles_loc.add((obstacle[1], obstacle[2], obstacle[0]))
             self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
+        if len(obstacles) > 3:
+            self.is_crowded = True
+        else:
+            self.is_crowded = False
+
+        if self.to_check_crowd:
+            self.to_check_crowd = False
+
     # simulator calls this function when the player encounters an obstacle
 
     def encounter_obstacle(self):
@@ -186,6 +196,10 @@ class Player:
         elif get_manhattan_dist((pos_x, pos_y), self.last_lookup_pos) > self.lookup_freq:
             self.last_lookup_pos = (self.pos_x, self.pos_y)
             print(self.turn_counter, 'Lookup - further than last lookup')
+            return 'lookup'
+
+        elif self.to_check_crowd == None:
+            self.to_check_crowd = True
             return 'lookup'
         # otherwise move
         else:
@@ -237,10 +251,11 @@ class Player:
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
         if not self.path_to_follow or len(self.path_to_follow) == 0:
-            if self.best_rest_spot is None:
+            if not self.is_crowded and not self.best_rest_spot is None:
                 self.best_rest_spot = self.get_best_resting_spot()
                 # add this to the path to follow, so that the subsequent function can make use of this function
-                print("best resting spot added! Spot is", self.best_rest_spot)
+                print("best resting spot added! Spot is",
+                      self.best_rest_spot)
                 self.path_to_follow.append(
                     [self.best_rest_spot[0], self.best_rest_spot[1], -1, "rest point"])
             else:
