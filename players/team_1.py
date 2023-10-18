@@ -21,6 +21,7 @@ class Player:
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
+        self.end_game = False 
 
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
@@ -158,18 +159,19 @@ class Player:
     # simulator calls this function to get the action 'lookup', 'move', or 'lookup move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
-
         #end game
-        if len(self.queue) == 0 or self.T_theta <= 10:
-            return 'move'
 
+        if len(self.queue) == 0 or self.T_theta <= 10:
+            if not self.end_game:
+                self.pos_x = pos_x - 2
+                self.pos_y = pos_y - 2
+                self.end_game = True
+            return 'move'
+        
         self.pos_x = pos_x
         self.pos_y = pos_y
-
         #lookup whole time during game
         return 'lookup move'
-
-    #########################################################
 
     def _normalize(self, vx, vy):
         norm = math.dist((vx, vy), (0, 0))
@@ -177,22 +179,22 @@ class Player:
 
     def _bounce_off_boundaries(self, x, y):
 
-        if x < 0:
+        if x <= 0:
             self.sign_x = 1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-        if y < 0:
+        if y <= 0:
             self.sign_y = 1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-        if x > 100:
+        if x >= 100:
             self.sign_x = -1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-        if y > 100:
+        if y >= 100:
             self.sign_y = -1
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
@@ -356,8 +358,10 @@ class Player:
         x = random.random()
         y = random.random()
 
+
         # bias: 5% of the time. So any generated val <= 0.05 should return goal
         # else: multiply the random val by the constraint of the grid to get valid coord
+        
         if (x <= 0.05):
             x = goal_x
         else:
@@ -368,7 +372,8 @@ class Player:
         else:
             y *= YDIM
 
-        return x,y
+        print(x, y)
+        return x, y
 
     def _extend(self, current_node, new_point, delta):
         """
@@ -460,7 +465,6 @@ class Player:
                 closest_node = self._nearest_node(nodes, new_point)
                 # extend towards new_point
                 new_node = self._extend(closest_node, new_point, self.DELTA)
-
                 # check extension is also collision free
                 if self._is_collision_free(obstacles, other_players, new_node):
                     # print(f'extended node {new_node} is collision free')
@@ -527,7 +531,7 @@ class Player:
         #     print(f'Queue: {stall.id}')
         #
         # print("queue done")
-
+        curr_pos_x, curr_pos_y = self.pos_x, self.pos_y
 
         # if we just start or when we finish collecting an item
         if self.goal_stall is None and len(self.queue) > 0:
@@ -535,6 +539,7 @@ class Player:
             # print(f'AFTER getting next node Q={self.queue}')
             # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
 
+        #print("This is the goal ", self.goal_stall.id, self.goal_stall.x, self.goal_stall.y)
         if self.goal_stall:
             if self.collision_counter >=3:
                 self.vx = random.random()
@@ -555,8 +560,8 @@ class Player:
             if self._is_collision_free(self.obstacles_list, self.other_players_dict, goal_point):
                 vx = self.goal_stall.x - self.pos_x
                 vy = self.goal_stall.y - self.pos_y
-                self.sign_x = 1
-                self.sign_y = 1
+                #self.sign_x = 1
+                #self.sign_y = 1
                 self.vx, self.vy = self._normalize(vx, vy)
 
                 self._bounce_off_boundaries(self.pos_x, self.pos_y)
@@ -566,24 +571,27 @@ class Player:
 
                 # print(f'Moving to {new_pos_x}, {new_pos_y}')
 
-                # print("No obstacles in the way, moving directly to goal stall")
+                print("No obstacles in the way, moving directly to goal stall")
                 return new_pos_x, new_pos_y
             else:
                 # print("Obstacle detected, planning with RRT")
 
-                self.rrt_tree = [self.start_node]  # Initialize the RRT tree with the start node
-
+                self.rrt_tree = [(curr_pos_x, curr_pos_y)]  # Initialize the RRT tree with the start node
+              #  print("This is the start node ", self.start_node)
                 # explore until new point is collision free or until 1 second has passed
                 begin = datetime.utcnow()
                 while datetime.utcnow() - begin < self.max_time:
+                    print("This is ", datetime.utcnow(), begin, self.max_time)
                     new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
                     if self._is_collision_free(self.obstacles_list, self.other_players_dict, new_point):
                         break
 
                 closest_node = self._nearest_node(self.rrt_tree, new_point)
+                print("This is the new node ", closest_node, " this is the tree ", self.rrt_tree)
 
                 new_node = self._extend(closest_node, new_point, self.DELTA)
-
+               # print("This is the new node ", new_node)
+                
                 if self._is_collision_free(self.obstacles_list, self.other_players_dict, new_node):
                     # print(f'extending to new node {new_node}')
                     # print(f'DISTANCE CURR-NEW NODE {math.dist(self.start_node, new_node)}')
@@ -591,11 +599,13 @@ class Player:
                     # self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
                     new_pos_x, new_pos_y = new_node
+                   # print("This is x, y ", new_pos_x, new_pos_y)
                     return new_pos_x, new_pos_y
                 else:
                     print("Collision detected while extending RRT tree")
 
                     self.vx = random.random()
+                    print("This is the unit vector", self.vx)
                     self.vy = math.sqrt(1 - self.vx ** 2)
                     #self.sign_x *= -1
                     #self.sign_y *= -1
@@ -611,7 +621,7 @@ class Player:
         elif self.goal_stall is None and len(self.queue) == 0:
             self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
-            # print(f'No more stalls to visit, stand still {self.pos_x}, {self.pos_y}')
+            print(f'No more stalls to visit, stand still {self.pos_x}, {self.pos_y}')
 
             return self.pos_x, self.pos_y
 
@@ -625,6 +635,6 @@ class Player:
             new_pos_x = self.pos_x + self.sign_x * self.vx
             new_pos_y = self.pos_y + self.sign_y * self.vy
 
-            # print(f'Collision detected, moving to new {new_pos_x}, {new_pos_y}')
+            print(f'Collision detected, moving to new {new_pos_x}, {new_pos_y}')
             return new_pos_x, new_pos_y
 
