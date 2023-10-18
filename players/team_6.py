@@ -141,7 +141,7 @@ class Player:
         self.times_lkp = 0
 
         self.dir = self.pos.normalized_dir(self.__next_stall()) # unit vector representing direction of movement
-        # self.next_ckpt = Vector(initial_pos_x, initial_pos_y) # next lookup checkpoint       
+        self.phase1done = False 
     
     def __randunit(self):
         """A random unit vector."""
@@ -190,8 +190,9 @@ class Player:
         def aStar_expand(vector, stall):
             newvecs = list()
             unitvec = Vector(1,0)
-            for theta in range(12):
-                d = unitvec.rotate(theta*math.pi/6)
+            N = 8
+            for theta in range(N):
+                d = unitvec.rotate(theta*2*math.pi/N)
                 newvec =  Vector(vector.x+d.x, vector.y+d.y, vector, stall, vector.dist + 1)
                 fruitful = (newvec.dist2stall(stall) < 1)
                 if newvec.x>0 and newvec.x<WALL_BOUNDARY and \
@@ -221,7 +222,7 @@ class Player:
                 if (curr.x, curr.y) not in explored:
                     explored.append((curr.x, curr.y))
                     # return path 
-                    if curr.dist2stall(nextStall) < max(1, self.pos.dist2stall(nextStall) - 5) or curr.dist >= 10:
+                    if curr.dist2stall(nextStall) < max(1, self.pos.dist2stall(nextStall) - 18) or curr.dist >= 20:
                         self.aStarRoute = get_astar_path(curr)
                         return
                     for child_vector in aStar_expand(curr, nextStall):
@@ -286,6 +287,12 @@ class Player:
         if len(self.stalls_next) == 0:
             self.dir = Vector(0,0)
             return 'move'
+            # if self.phase1done:
+            #     self.dir = Vector(0,0)
+            #     return 'move'
+            # else:
+            #     self.phase1done = True
+            #     self.stalls_next.
         if self.t_since_lkp>0:
             self.prev_pos.update_val(self.pos)
         self.t_since_lkp += 1
