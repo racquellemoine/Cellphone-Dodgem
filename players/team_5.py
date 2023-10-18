@@ -9,6 +9,7 @@ import rvo2
 random.seed(2)
 
 LOOKUP_INTERVAL = 8
+COLLISION_TIMEOUT = 12
 DIST_EPS = 1e-5
 
 #RVO Simulator Properties
@@ -17,7 +18,7 @@ NEIGHBOR_DIST = 8
 MAX_NEIGHBORS = 6
 TIME_HORIZON = 1
 TIME_HORIZON_OBS = 2
-RADIUS = 0.5
+RADIUS = 0.6
 MAX_SPEED = 1
 DEF_VELO = (0, 0)
 
@@ -215,7 +216,7 @@ class Player:
 
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        self.collision = 12
+        self.collision = COLLISION_TIMEOUT
         self.lookup_timer = 0
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx**2)
@@ -252,6 +253,12 @@ class Player:
 
         return 'move'
     
+    def __is_deadlock(self, px, py, vx, vy):
+        pd = self.__calc_distance(px, py, 0, 0)
+        vd = self.__calc_distance(vx, vy, 0, 0)
+
+        return pd < 0.1 and vd < 0.1
+
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
@@ -268,7 +275,14 @@ class Player:
             self.sign_x = 1
             self.sign_y = 1
             self.sim.doStep()
+            prev = (self.vx, self.vy)
             self.vx, self.vy = self.sim.getAgentVelocity(self.agent)
+            if self.__is_deadlock(*prev, self.vx, self.vy):
+                self.collision = COLLISION_TIMEOUT
+                self.vx = random.random()
+                self.vy = math.sqrt(1 - self.vx**2)
+                self.sign_x *= -1
+                self.sign_y *= -1
             #print(f"{self.q[0].id} : {self.vx}, {self.vy}")
             #print("pos: ", self.pos_x, self.pos_y)
             #print("sim pos: ", self.sim.getAgentPosition(self.agent))
