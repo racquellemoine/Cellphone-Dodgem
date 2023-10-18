@@ -191,7 +191,7 @@ class Player:
         def aStar_expand(vector, stall):
             newvecs = list()
             unitvec = Vector(1,0)
-            N = 8
+            N = 6
             for theta in range(N):
                 d = unitvec.rotate(theta*2*math.pi/N)
                 newvec =  Vector(vector.x+d.x, vector.y+d.y, vector, stall, vector.dist + 1)
@@ -285,7 +285,12 @@ class Player:
 
     # simulator calls this function to get the action 'lookup' or 'move' from the player
     def get_action(self, pos_x, pos_y):
-        # return 'lookup' or 'move'
+        # return 'lookup move' or 'move'
+        self.preprev_pos.update_val(self.prev_pos)
+        self.prev_pos.update_val(self.pos)
+        self.pos = Vector(pos_x, pos_y) # update current position
+        self.t_since_lkp += 1
+
         if len(self.stalls_next) == 0:
             self.dir = Vector(0,0)
             return 'move'
@@ -295,20 +300,16 @@ class Player:
             # else:
             #     self.phase1done = True
             #     self.stalls_next.
-        if self.t_since_lkp>0:
-            self.preprev_pos.update_val(self.prev_pos)
-            self.prev_pos.update_val(self.pos)
-        self.t_since_lkp += 1
-        self.pos = Vector(pos_x, pos_y) # update current position
+        
         
         if self.pos.dist2(self.prev_pos) < EPSILON or self.pos.dist2(self.preprev_pos) < 0.5: # if we are oscilating/not moving
             self.dir = self.__randunit()
             npos = self.pos + self.dir
-            while any(npos.dist2stall(obstacle) <= 2*DANGER_ZONE for obstacle in self.obstacles_known) or any(npos.dist2(player) < 2*DANGER_ZONE+1 for player in self.players_cached):
+            while any(npos.dist2stall(obstacle) <= DANGER_ZONE for obstacle in self.obstacles_known) or any(npos.dist2(player) < DANGER_ZONE+2 for player in self.players_cached):
                 self.dir = self.__randunit()
                 npos = self.pos + self.dir
             self.should_lookup = True
-            return 'move'
+            return 'lookup move'
 
         if self.should_lookup \
             or self.pos.dist2(self.pos_last_lkp) >= (HORIZON-2* DANGER_ZONE)/2 \
