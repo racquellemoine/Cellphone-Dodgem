@@ -4,12 +4,10 @@ import fast_tsp
 from collections import deque
 from datetime import timedelta, datetime
 
-# import constants
-
 random.seed(2)
 
-#Constants
-MAX_SECS = 1
+# Constants
+MAX_SECS = 0.5
 
 
 class Player:
@@ -23,13 +21,14 @@ class Player:
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
+        self.end_game = False
 
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
         self.sign_x = 1
         self.sign_y = 1
 
-        #Added functionality 
+        # Added functionality
         self.distance_grid = []
         for i in range(len(stalls_to_visit) + 1):
             row = []
@@ -38,27 +37,32 @@ class Player:
 
             # Add the row to the list
             self.distance_grid.append(row)
-        
+
         self.queue = deque()
         self.set_tsp_path()
         self.set_queue()
-        
+
         self.obstacles_list = []
-        self.other_players_list = []
+        self.other_players_dict = {}
         self.field_vision = []
 
         self.XDIM = 100  # constants.vis_height
         self.YDIM = 100  # constants.vis_width
         self.DELTA = 10  # temp, bc we can only move 1m per turn?
         self.max_time = timedelta(seconds=MAX_SECS)
-        self.WIN_RADIUS = 2 # temp, but bc stall is 2x2 and we have 1m border around
+        self.WIN_RADIUS = 2  # temp, but bc stall is 2x2 and we have 1m border around
         self.LOOKUP_RADIUS = 10
-        self.start_node = self.pos_x, self.pos_y
+        # self.start_node = self.pos_x, self.pos_y
 
         self.goal_stall = None
         self.is_rrt_planning = False
         self.rrt_tree = []
         self.collided = False
+
+        self.collision_counter = 0
+        self.stuck_counter = 0
+        self.backward_steps = 2
+        self.last_moves = []
 
     # simulator calls this function when the player collects an item from a stall
 
@@ -83,24 +87,14 @@ class Player:
         if stall_id == self.queue[0].id:
             self.queue.popleft()
             self.goal_stall = None
-
-        for stall in self.queue:
-            if stall.id == stall_id:
-                # print("Stall id: ", stall.id)
-                self.queue.remove(stall)
-                self.goal_stall = None
-                break
-
-    def _update_players_list(self):
-        """
-        Update the list of players to remove any player more than LOOKUP_RADIUS m away from us
-
-        self.other_players_list contains a list of tuples for each player, i.e. (ID, x, y)
-        """
-        for player in self.other_players_list:
-            if math.dist((self.pos_x, self.pos_y), (player[1], player[2])) > self.LOOKUP_RADIUS:
-                self.other_players_list.remove(player)
-
+        else:
+            # do this because what if we by accident collect something along the way?
+            # IF goal_stall.id == stall_id, then set None, else, we still need the curr traj
+            for stall in self.queue:
+                if stall.id == stall_id:
+                    print("Collected: ", stall.id)
+                    self.queue.remove(stall)
+                    break
 
     def pass_lookup_info(self, other_players, obstacles):
         """
@@ -117,88 +111,89 @@ class Player:
             if obstacle not in self.obstacles_list:
                 self.obstacles_list.append(obstacle)
 
-        # need to do something with how we only want to record if people are around us
-        # otherwise, it doesn't matter, we should pop them out.
-
-        # call to update the list of players
-        self._update_players_list()
-
-        #if the player ID matches one of the IDs in other_players_list, remove it and add the new once
+        # set the dict value based on the player IDs of ONLY players we currently see
+        ## UPDATE THE DICT ONLY BASED ON WHO WE SEE IN OUR FIELD OF VISION, i.e. THE ONLY THREATS
+        current_players = {}
         for player in other_players:
-            # print("WHERE R U PLAYER", player)
-            self.other_players_list.append(player)
-            # for added_players in self.other_players_list:
-            #     if player[0] == added_players[0]:
-            #         print(f'PLAYER in LIST {player[0]}')
-            #         self.other_players_list.remove(added_players)
-            #         self.other_players_list.append(player)
-            #         break
-            #     #if not already in the list
-            #     else:
-            #         print(f'OTHER PLAYER {player[0]}')
-            #         self.other_players_list.append(player)
+            player_id, x, y = player
+            current_players[player_id] = (x, y)
+        self.other_players_dict = current_players
+
+        #BEFORE:::
+        # for player in other_players:
+        #     self.other_players_dict[player[0]] = (player[1], player[2])
 
         return
 
     def emergency_exit(self):
 
-        if len(self.queue) <= 2:
-            return
+        if len(self.field_vision) >= 10:
+            # print("FIELD", self.field_vision)
 
-        if len(self.field_vision) >= 7:
             print("EMERGENCY EXIT")
             self.queue.append(self.goal_stall)
             self.queue.popleft()
-            if len(self.queue) > 3:
-                self.goal_stall = self.queue[2]
-            else:
-                self.goal_stall = self.queue[0]
+            # if len(self.queue) > 3:
+            #     self.goal_stall = self.queue[2]
+            # else:
+            self.goal_stall = self.queue[0]
 
         self.field_vision = []
 
         return
 
+    def stuck_exit(self):
+        self.queue.append(self.goal_stall)
+        self.queue.popleft()
+        self.goal_stall = self.queue[0]
+        self.stuck_counter = 0
+
+
     # simulator calls this function when the player encounters an obstacle
     def encounter_obstacle(self):
-        # print('Encountered obstacle')
-        self.collided = True
+        print('ENCOUNTER OBSTACLE')
 
+        self.collided = True
+        self.collision_counter += 1
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
         self.sign_x *= -1
         self.sign_y *= -1
 
-        # self.sign_x *= -1
-        # self.sign_y *= -1
-
+        #TODO: keep this here?
+        self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
     # simulator calls this function to get the action 'lookup', 'move', or 'lookup move' from the player
     def get_action(self, pos_x, pos_y):
         # return 'lookup' or 'move'
+        # end game
 
-        #end game
         if len(self.queue) == 0 or self.T_theta <= 10:
+            # if not self.end_game:
+            #     print("END GAME")
+            #     self.pos_x = pos_x - 2
+            #     self.pos_y = pos_y - 2
+            #     self.end_game = True
+            if self.end_game:
+                # Move backward for 'backward_steps' steps
+                if self.backward_steps > 0:
+                    #GO LEFT based on current velocity. Just switch x sign
+                    self.sign_x *= -1
+                    self.sign_y = 1
+                else:
+                    self.end_game = False
             return 'move'
 
         self.pos_x = pos_x
         self.pos_y = pos_y
-
-        #lookup whole time during game
+        # lookup whole time during game
         return 'lookup move'
-
-    #########################################################
 
     def _normalize(self, vx, vy):
         norm = math.dist((vx, vy), (0, 0))
         return vx / norm, vy / norm
 
     def _bounce_off_boundaries(self, x, y):
-
-        # if x < 0 or x > 100:
-        #     self.sign_x *= -1 # Reverse the x-velocity when hitting the horizontal boundaries
-        #
-        # if y < 0 or y > 100:
-        #     self.sign_y *= -1  # Reverse the y-velocity when hitting the vertical boundaries
 
         if x <= 0:
             self.sign_x = 1
@@ -220,7 +215,7 @@ class Player:
             self.vx = random.random()
             self.vy = math.sqrt(1 - self.vx ** 2)
 
-     #########################################################
+    #########################################################
     #                  From dodgem_game.py                  #
     #########################################################
 
@@ -317,21 +312,21 @@ class Player:
     #                   RRT Implementation                  #
     #########################################################
 
-    def _win_condition(self, new_node, goal_point):
-        """
-        Check if the new_node is within WIN_RADIUS of the goal_stall
-
-        Args:
-            new_node - the node we are checking
-            goal_stall - the stall we are trying to reach
-
-        Returns:
-            Bool - True if new_node is within WIN_RADIUS of goal_stall, False otherwise
-        """
-
-        if math.dist(new_node, (goal_point[0], goal_point[1])) <= self.WIN_RADIUS:
-            return True
-        return False
+    # def _win_condition(self, new_node, goal_point):
+    #     """
+    #     Check if the new_node is within WIN_RADIUS of the goal_stall
+    #
+    #     Args:
+    #         new_node - the node we are checking
+    #         goal_stall - the stall we are trying to reach
+    #
+    #     Returns:
+    #         Bool - True if new_node is within WIN_RADIUS of goal_stall, False otherwise
+    #     """
+    #
+    #     if math.dist(new_node, (goal_point[0], goal_point[1])) <= self.WIN_RADIUS:
+    #         return True
+    #     return False
 
     def _nearest_node(self, nodes, new_node):
         """
@@ -381,6 +376,7 @@ class Player:
 
         # bias: 5% of the time. So any generated val <= 0.05 should return goal
         # else: multiply the random val by the constraint of the grid to get valid coord
+
         if (x <= 0.05):
             x = goal_x
         else:
@@ -391,7 +387,8 @@ class Player:
         else:
             y *= YDIM
 
-        return x,y
+        # print(x, y)
+        return x, y
 
     def _extend(self, current_node, new_point, delta):
         """
@@ -408,7 +405,7 @@ class Player:
             x, y (tuple) - the new point in space to move towards
         """
 
-        vx= new_point[0] - current_node[0]
+        vx = new_point[0] - current_node[0]
         vy = new_point[1] - current_node[1]
         self.sign_x = 1
         self.sign_y = 1
@@ -428,7 +425,7 @@ class Player:
 
         Args:
             obstacles - list of obstacle tuples (ID, x,y) in the game we know
-            other_players - list of other players' current position tuples (ID, x,y)
+            other_players - dict of other players' current position, i.e. ID: (x,y)
             new_point - the point we are checking for collision
 
         Returns:
@@ -444,77 +441,21 @@ class Player:
 
         for o in obstacles:
             if len(o) > 0:
-                x, y = o[1], o[2]
-                if self._check_collision_obstacle((x, y), new_point):
+                obstacle_coords = o[1], o[2]
+                if self._check_collision_obstacle(obstacle_coords, new_point):
                     self.field_vision.append(o)
                     return False
 
-        for p in other_players:
-            if len(p) > 0:
-                x, y = p[1], p[2]
-                if self._check_collision_obstacle((x, y), new_point):
-                    self.field_vision.append(p)
-                    return False
-
+        for player_id in other_players.keys():
+            # if len(p) > 0:
+            player_coords = other_players[player_id]
+            if self._check_collision_obstacle(player_coords, new_point):
+                # APPENDING TUPLE IN EXPECTED FORMAT
+                #TODO PLEASE CHANGE IF NEEDED FOR CLARITY
+                self.field_vision.append((player_id, player_coords[0], player_coords[1]))
+                return False
 
         return True
-
-    def rrt(self, goal_point, obstacles, other_players):
-        nodes = []
-        parents = {}
-        nodes.append(self.start_node)
-        collision_count = 0
-        iter_count = 0
-        rrt_path = []
-
-        """should it keep calling it and updating it as it goes, i.e, the current position is updated?"""
-        begin = datetime.utcnow()
-        while datetime.utcnow() - begin < self.max_time:
-
-            new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
-            # print(f'getting new point {new_point}')
-
-            if self._is_collision_free(obstacles, other_players, new_point):
-
-                # print(f'new point {new_point} is collision free')
-
-                closest_node = self._nearest_node(nodes, new_point)
-                # extend towards new_point
-                new_node = self._extend(closest_node, new_point, self.DELTA)
-
-                # check extension is also collision free
-                if self._is_collision_free(obstacles, other_players, new_node):
-                    # print(f'extended node {new_node} is collision free')
-
-                    nodes.append(new_node)
-                    parents[new_node] = closest_node
-
-                    # print(f'extended. parents {parents}')
-
-                    if self._win_condition(new_node, goal_point):
-
-                        # print("RRT win condition reached")
-
-                        # backtrack to get path
-                        curr_node = new_node
-                        while curr_node != self.start_node:
-                            rrt_path.append(curr_node)
-                            curr_node = parents[curr_node]
-                        rrt_path.append(self.start_node)
-                        rrt_path.reverse()
-                        return rrt_path
-
-                else:
-                    collision_count += 1
-            else:
-                collision_count += 1
-
-            iter_count += 1
-
-        # print(f'iter {iter_count}')
-
-        return rrt_path
-
 
     #########################################################
 
@@ -527,10 +468,9 @@ class Player:
         based on high traffic.
         """
         if len(self.queue) > 0:
-            #don't pop until we collect it!
+            # don't pop until we collect it!
             self.goal_stall = self.queue[0]
-            self.emergency_exit()
-
+            # self.emergency_exit()
 
     #########################################################
 
@@ -542,19 +482,91 @@ class Player:
         # if we detect an obstacle or player in our path, we want to use RRT to plan a path around it
         # if we don't detect anything, we want to move directly to the goal stall
 
+        # if self.goal_stall.id == 34 or self.goal_stall == 94:
+        #     print(f'Goal stall {self.goal_stall.id}')
+        #     print(f'Player {self.id} at {self.pos_x}, {self.pos_y}')
+        #     # print everything from the queue so we see the ID and not the object
+        #     for stall in self.queue:
+        #         print(f'Queue: {stall.id}')
+        #
+        #     print("queue done")
+
+
+        # curr_pos_x, curr_pos_y = self.pos_x, self.pos_y
+
         # if we just start or when we finish collecting an item
         if self.goal_stall is None and len(self.queue) > 0:
             self._get_next_tsp_node()
+            # print(f'AFTER getting next node Q={self.queue}')
             # # print(f'Goal stall is at {self.goal_stall.x}, {self.goal_stall.y}')
-
 
         if self.goal_stall:
 
+            # we compare the distance btw 5th last visited position and current position
+            if len(self.last_moves) == 5:
+                check_all = True
+                for move in self.last_moves:
+                    print(f'DIST {math.dist((self.pos_x, self.pos_y), move)}')
+                    if math.dist((self.pos_x, self.pos_y), move) > 2:
+                        check_all = False
+
+                if check_all:
+                    print("STUCK")
+                    self.stuck_counter += 1
+
+                # reset
+                self.last_moves = []
+
+            if self.stuck_counter >= 2:
+                print("CALLING STUCK EXIT")
+
+                if len(self.queue) == 1:
+
+                    print("STUCK BEFORE LAST STALL")
+                    #RANDOM TRAJECTORY
+                    self.vx = random.random()
+                    self.vy = math.sqrt(1 - self.vx ** 2)
+                    self.sign_x *= 1 #-1
+                    self.sign_y *= 1
+
+                    self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+                    new_pos_x = self.pos_x + self.sign_x * self.vx
+                    new_pos_y = self.pos_y + self.sign_y * self.vy
+
+                    self.stuck_counter = 0
+
+
+                    self.last_moves.append((new_pos_x, new_pos_y))
+                    return new_pos_x, new_pos_y
+
+                else:
+                    self.stuck_exit()
+
+            if self.collision_counter >= 3:
+                # print(f'COLLISION COUNT {self.collision_counter}')
+
+                # RANDOM COLLISION TRAJECTORY ALREADY CALCULATED IN ENCOUNTER OBSTACLE FXN
+
+                # self.vx = random.random()
+                # self.vy = math.sqrt(1 - self.vx ** 2)
+                # self.sign_x *= -1
+                # self.sign_y *= -1
+
+                self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+                new_pos_x = self.pos_x + self.sign_x * self.vx
+                new_pos_y = self.pos_y + self.sign_y * self.vy
+                self.collision_counter = 0
+
+                self.last_moves.append((new_pos_x, new_pos_y))
+                return new_pos_x, new_pos_y
+
+
+
             goal_point = self.goal_stall.x, self.goal_stall.y
 
-            # if not self.is_rrt_planning:
-
-            if self._is_collision_free(self.obstacles_list, self.other_players_list, goal_point):
+            if self._is_collision_free(self.obstacles_list, self.other_players_dict, goal_point):
                 vx = self.goal_stall.x - self.pos_x
                 vy = self.goal_stall.y - self.pos_y
                 self.sign_x = 1
@@ -567,56 +579,80 @@ class Player:
                 new_pos_y = self.pos_y + self.sign_y * self.vy
 
                 # print(f'Moving to {new_pos_x}, {new_pos_y}')
+                print("No obstacles in the way, moving directly to goal stall")
 
-                # print("No obstacles in the way, moving directly to goal stall")
+                self.last_moves.append((new_pos_x, new_pos_y))
                 return new_pos_x, new_pos_y
             else:
                 # print("Obstacle detected, planning with RRT")
 
-                self.rrt_tree = [self.start_node]  # Initialize the RRT tree with the start node
+                self.emergency_exit()
 
+
+                #TODO. (did), but just using self.pos_x, self.pos_y instead of curr bc it's same thing
+                self.rrt_tree = [(self.pos_x, self.pos_y)]  # Initialize the RRT tree with the start node
+                #  print("This is the start node ", self.start_node)
                 # explore until new point is collision free or until 1 second has passed
                 begin = datetime.utcnow()
                 while datetime.utcnow() - begin < self.max_time:
+                    # print("This is ", datetime.utcnow(), begin, self.max_time)
                     new_point = self._get_new_point(self.XDIM, self.YDIM, goal_point)
-                    if self._is_collision_free(self.obstacles_list, self.other_players_list, new_point):
+                    if self._is_collision_free(self.obstacles_list, self.other_players_dict, new_point):
                         break
 
-                closest_node = self._nearest_node(self.rrt_tree, new_point)
+                #TODO --- the rrt tree
+                # closest_node = self._nearest_node(self.rrt_tree, new_point)
+                # print("Closest ", closest_node, " Tree ", self.rrt_tree, " New point ", new_point, "Current pos ", self.pos_x, self.pos_y)
 
-                new_node = self._extend(closest_node, new_point, self.DELTA)
+                new_node = self._extend((self.pos_x, self.pos_y), new_point, self.DELTA)
+                # print("This is the new node ", new_node)
 
-                if self._is_collision_free(self.obstacles_list, self.other_players_list, new_node):
+                # TODO CHANGE FROM obstacles list to field vision. aka anything we're going to collide with??
+                if self._is_collision_free(self.obstacles_list, self.other_players_dict, new_node):
                     # print(f'extending to new node {new_node}')
                     # print(f'DISTANCE CURR-NEW NODE {math.dist(self.start_node, new_node)}')
                     self.rrt_tree.append(new_node)
                     # self._bounce_off_boundaries(self.pos_x, self.pos_y)
 
                     new_pos_x, new_pos_y = new_node
+                    # print("This is x, y ", new_pos_x, new_pos_y)
+                    print("Returning new node from RRT")
+
+                    self.last_moves.append((new_pos_x, new_pos_y))
                     return new_pos_x, new_pos_y
                 else:
-                    # print("Collision detected while extending RRT tree")
+                    # TODO: WHAT ELSE DO WE DO WHEN WE ACTUALLY JUST HAD A COLLISION? HOW DO WE MOVE?
+                    print("Collision detected while extending RRT tree")
 
-                    return self.pos_x, self.pos_y
+                    self.vx = random.random()
+                    # print("This is the unit vector", self.vx)
+                    self.vy = math.sqrt(1 - self.vx ** 2)
+                    self.sign_x *= -1
+                    self.sign_y *= -1
 
+                    self._bounce_off_boundaries(self.pos_x, self.pos_y)
+
+                    new_pos_x = self.pos_x + self.sign_x * self.vx
+                    new_pos_y = self.pos_y + self.sign_y * self.vy
+
+                    self.last_moves.append((new_pos_x, new_pos_y))
+                    return new_pos_x, new_pos_y
 
         elif self.goal_stall is None and len(self.queue) == 0:
-            self._bounce_off_boundaries(self.pos_x, self.pos_y)
+            # endgame, step to the left of the stall
+            if not self.end_game and self.backward_steps > 0:
+                self.end_game = True
+                # print("not yet end game amd backward steps > 0")
+                return self.pos_x, self.pos_y
 
-            # print(f'No more stalls to visit, stand still {self.pos_x}, {self.pos_y}')
+            elif self.backward_steps == 0:
+                # print("end game and backward steps == 0")
+                return self.pos_x, self.pos_y
 
-            return self.pos_x, self.pos_y
-
-        # TO DO: WHAT ELSE DO WE DO WHEN WE ACTUALLY JUST HAD A COLLISION? HOW DO WE MOVE?
-        elif self.collided:
-            # print("detected collision?")
-            self.collided = False
-
-            self._bounce_off_boundaries(self.pos_x, self.pos_y)
-
-            new_pos_x = self.pos_x + self.sign_x * self.vx
-            new_pos_y = self.pos_y + self.sign_y * self.vy
-
-            # print(f'Collision detected, moving to new {new_pos_x}, {new_pos_y}')
-            return new_pos_x, new_pos_y
-
+            elif self.end_game and self.backward_steps > 0:
+                self.backward_steps -= 1
+                # print(f'No more stalls to visit, move out of way {self.backward_steps} steps left')
+                self._bounce_off_boundaries(self.pos_x, self.pos_y)
+                new_pos_x = self.pos_x + self.sign_x * self.vx
+                new_pos_y = self.pos_y + self.sign_y * self.vy
+                return new_pos_x, new_pos_y

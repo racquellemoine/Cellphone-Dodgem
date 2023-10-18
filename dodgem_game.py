@@ -14,7 +14,7 @@ from players.team_1 import Player as Player1
 from players.team_2 import Player as Player2
 from players.team_3 import Player as Player3
 from players.team_4 import Player as Player4
-from players.team_5 import Player as Player5
+from players.default_player import Player as Player5
 from players.team_6 import Player as Player6
 from player_state import PlayerState
 
