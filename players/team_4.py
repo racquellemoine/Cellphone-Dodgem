@@ -41,14 +41,13 @@ class Location:
         if new_x_pos > 100 or new_x_pos < 0:
             return None
 
-        # TODO: expand to account for players as well and their expected trajectories if known to us
         if self.player.obstacles and len(self.player.obstacles) > 0:
             for key in self.player.obstacles.keys():
                 obs_x = self.player.obstacles[key][0]
                 obs_y = self.player.obstacles[key][1]
                 if self.check_collision_obstacle(obs_x, obs_y, self.x, self.y, new_x_pos, new_y_pos):
                     return None
-        
+
         if self.player.other_players and len(self.player.other_players) > 0:
             for key in self.player.other_players.keys():
                 obs_x = self.player.other_players[key][0]
@@ -193,7 +192,7 @@ class Player:
         self.T_theta = T_theta
         self.tsp_path = tsp_path
         self.num_players = num_players
-        self.lookup_counter = 0
+        self.lookup_counter = 2
 
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
@@ -220,6 +219,8 @@ class Player:
         self.tsp()
         self.queue_path()
         self.in_endgame = False
+        self.end_x = 0
+        self.end_y = 0
 
     # initialize queue with stalls to visit from tsp in order
     def queue_path(self):
@@ -254,6 +255,25 @@ class Player:
         for s in self.paths:
             if stall_id == s.id:
                 self.paths.remove(s)
+        if len(self.paths) < 1:
+            self.in_endgame = True
+            self.end_y = 5 if self.pos_y < 50 else 95
+            self.end_x = 5 if self.pos_x < 50 else 95
+            move_end_point = 0
+            if self.obstacles and len(self.obstacles) > 0:
+                for key in self.obstacles.keys():
+                    obs_x = self.obstacles[key][0]
+                    obs_y = self.obstacles[key][1]
+                    while self.check_collision_obstacle(obs_x, obs_y, self.end_x, self.end_y, self.end_x, self.end_y):
+                        # just stay where we are if can't find obstacle free place after 10 tries
+                        if move_end_point == 10:
+                            self.end_x = self.pos_x
+                            self.end_y = self.pos_y
+                        move_end_point += 1
+                        if self.end_x < 5:
+                            self.end_x += 4
+                        else:
+                            self.end_x -= 4
 
     # simulator calls this function when it passes the lookup information
     # this function is called if the player returns 'lookup' as the action in the get_action function
@@ -274,9 +294,9 @@ class Player:
             self.collision_counter = 20
         else:
             self.collision_counter = 9
-        
+
         self.action = 'lookup'
-        self.lookup_counter = 9
+        self.lookup_counter = 10
         self.vx = random.random()
         self.vy = math.sqrt(1 - self.vx ** 2)
         self.sign_x *= -1
@@ -284,8 +304,12 @@ class Player:
 
     def A_star_obstacle_search(self):
         frontier = queue.PriorityQueue()
-        if self.paths and len(self.paths) > 0:
-            initial_location = Location(self.pos_x, self.pos_y, self.paths[0].x, self.paths[0].y, None, 0, self)
+        if (self.paths and len(self.paths) > 0) or self.in_endgame:
+            if not self.in_endgame:
+                initial_location = Location(self.pos_x, self.pos_y, self.paths[0].x, self.paths[0].y, None, 0, self)
+            else:
+                initial_location = Location(self.pos_x, self.pos_y, self.end_x, self.end_y, None, 0, self)
+
             frontier.put(initial_location)
 
             explored = set()
@@ -296,7 +320,7 @@ class Player:
                 if (state.x, state.y) not in explored:
                     explored.add((state.x, state.y))
                     # return path once hit target
-                    if self.hit_goal(state) or state.distance_travelled >= 5:
+                    if self.hit_goal(state) or state.distance_travelled >= 7:
                         return self.get_path_to_goal(state)
                     for child_location in state.expand():
                         if (child_location.x, child_location.y) not in explored:
@@ -322,19 +346,20 @@ class Player:
         self.pos_x = pos_x
         self.pos_y = pos_y
 
-
-        if self.lookup_counter == 0:
+        if self.lookup_counter == 0 and self.in_endgame == False:
             self.lookup_counter = 9
             self.other_players = {}
             return "lookup"
-        elif self.lookup_counter == 4:
-            self.A_star_obstacle_search
+        elif self.lookup_counter == 4 or not self.reroute or (len(self.reroute) < 1):
+            self.reroute = self.A_star_obstacle_search()
 
         return self.action
 
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
+        if self.in_endgame:
+            return self.endgame()
         reroute = False
         if self.collision_counter > 0:
             self.collision_counter -= 1
@@ -382,17 +407,19 @@ class Player:
         return new_pos_x, new_pos_y
 
     def endgame(self):
-        final_pos_y = 5 if self.pos_y < 50 else 95
-        final_pos_x = 5 if self.pos_x < 50 else 95
-        delta_y = final_pos_y - self.pos_y
-        delta_x = final_pos_x - self.pos_x
+        delta_y = self.end_y - self.pos_y
+        delta_x = self.end_x - self.pos_x
 
         if -1 < delta_y < 1 and -1 < delta_x < 1:
             return self.pos_x, self.pos_y
         else:
-            angle = math.atan(numpy.abs(delta_y) / numpy.abs(delta_x))
-            self.vy = math.sin(angle)
-            self.vx = math.cos(angle)
+            if not self.reroute or len(self.reroute) < 1:
+                self.reroute = self.A_star_obstacle_search()
+            if self.reroute and len(self.reroute) > 0:
+                new_pos_x = self.reroute[0][0]
+                new_pos_y = self.reroute[0][1]
+                self.reroute = self.reroute[1:]
+                return new_pos_x, new_pos_y
 
         self.sign_y = -1 if delta_y < 0 else 1
         self.sign_x = -1 if delta_x < 0 else 1
