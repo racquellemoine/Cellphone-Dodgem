@@ -30,6 +30,7 @@ class Player:
         self.turn_counter = 0
         self.collision_turn = -100
 
+        self.is_crowded = None
         self.last_lookup_pos = (None, None)
 
         # set the lookup frequency that is dependent on the number of players in the game
@@ -166,14 +167,14 @@ class Player:
 
         self.pos_x = pos_x
         self.pos_y = pos_y
-        print(f"In get_action function, <pos_x, pos_y>: <{pos_x}, {pos_y}>")
-        print(self.turn_counter)
+        # print(f"In get_action function, <pos_x, pos_y>: <{pos_x}, {pos_y}>")
+        # print(self.turn_counter)
 
         # a function that checkes if the current position is near an undiscovered region.
         def get_manhattan_dist(a, b):
             # a and b both are two dimensional vectors describing the positions of two points for which the distance is required
             return abs(a[0] - b[0]) + abs(a[1] - b[1])
-        
+
         # check if the current position
         # a) is not discovered yet
         if self.discovered_region[int(pos_x)][int(pos_y)] == -1:
@@ -190,53 +191,6 @@ class Player:
         else:
             print(self.turn_counter, 'move')
             return 'move'
-
-        print(self.turn_counter, 'move')
-        return 'move'
-
-
-    # v1 of the function
-    def get_action_v1(self, pos_x, pos_y):
-        # return 'lookup' or 'move'
-
-        self.turn_counter += 1
-
-        self.pos_x = pos_x
-        self.pos_y = pos_y
-
-        # a function that checkes if the current position is near an undiscovered region.
-        def should_lookup():
-            # all possible 8 directions to move from the current position
-            _x = [0, 1, 1,  1,  0, -1, -1, -1]
-            _y = [1, 1, 0, -1, -1, -1,  0,  1]
-
-            for x_move, y_move in zip(_x, _y):
-                # Check for out of bound situations
-                curr_x = max(min(pos_x + x_move, 99), 0)
-                curr_y = max(min(pos_y + y_move, 99), 0)
-
-                if self.discovered_region[int(curr_x)][int(curr_y)] == -1:
-                    return True  # i.e. we should look up
-
-            # otherwise, don't look up
-            return False
-
-        # check if the current position
-        # a) is not discovered yet
-        if self.discovered_region[int(pos_x)][int(pos_y)] == -1:
-            return 'lookup'
-
-        # b) within the already discovered region, but about to go to an undiscovered region (+- 1 units)
-        elif should_lookup():
-            return 'lookup'
-        # otherwise move
-        if len(self.path_to_follow) == 0:
-            return 'move'
-
-        if self.turn_counter % 10 == 0:
-            return 'lookup'
-
-        return 'move'
 
     def get_best_resting_spot(self):
 
@@ -263,14 +217,14 @@ class Player:
             return score
 
         best_score = -1000
-        best_pos   = (-1, -1)
+        best_pos = (-1, -1)
         for i in range(1, 101):
             for j in range(1, 101):
                 curr_score = get_score(i, j)
                 if curr_score > best_score:
                     best_score = curr_score
                     best_pos = (i, j)
-        
+
         best_pos_bag = []
         for i in range(1, 101):
             for j in range(1, 101):
@@ -287,7 +241,8 @@ class Player:
                 self.best_rest_spot = self.get_best_resting_spot()
                 # add this to the path to follow, so that the subsequent function can make use of this function
                 print("best resting spot added! Spot is", self.best_rest_spot)
-                self.path_to_follow.append([self.best_rest_spot[0], self.best_rest_spot[1], -1, "rest point"])
+                self.path_to_follow.append(
+                    [self.best_rest_spot[0], self.best_rest_spot[1], -1, "rest point"])
             else:
                 return self.pos_x, self.pos_y  # No stalls to visit
 
