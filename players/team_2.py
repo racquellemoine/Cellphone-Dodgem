@@ -149,12 +149,11 @@ class Player:
             self.obstacles_loc.add((obstacle[1], obstacle[2], obstacle[0]))
             self.discovered_region[int(obstacle[1])][int(obstacle[2])] = 0
 
-        if len(obstacles) > 3:
-            self.is_crowded = True
-        else:
-            self.is_crowded = False
-
         if self.to_check_crowd:
+            if len(obstacles) > 3:
+                self.is_crowded = True
+            else:
+                self.is_crowded = False
             self.to_check_crowd = False
 
     # simulator calls this function when the player encounters an obstacle
