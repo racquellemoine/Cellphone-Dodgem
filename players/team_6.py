@@ -223,7 +223,7 @@ class Player:
                 if (curr.x, curr.y) not in explored:
                     explored.append((curr.x, curr.y))
                     # return path 
-                    if curr.dist2stall(nextStall) < max(1, self.pos.dist2stall(nextStall) - 36) or curr.dist >= 40:
+                    if curr.dist2stall(nextStall) < max(1, self.pos.dist2stall(nextStall) - 18) or curr.dist >= 20:
                         self.aStarRoute = get_astar_path(curr)
                         return
                     for child_vector in aStar_expand(curr, nextStall):
