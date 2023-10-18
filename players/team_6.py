@@ -190,7 +190,7 @@ class Player:
         #returns 12 directional vectors, each seperated by 30 degrees, that are possible moves from the current vector
         def aStar_expand(vector, stall):
             newvecs = list()
-            unitvec = Vector(1,0)
+            unitvec = self.__randunit()
             N = 6
             for theta in range(N):
                 d = unitvec.rotate(theta*2*math.pi/N)
@@ -309,7 +309,7 @@ class Player:
                 self.dir = self.__randunit()
                 npos = self.pos + self.dir
             self.should_lookup = True
-            return 'lookup move'
+            return 'move'
 
         if self.should_lookup \
             or self.pos.dist2(self.pos_last_lkp) >= (HORIZON-2* DANGER_ZONE)/2 \
