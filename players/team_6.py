@@ -301,12 +301,13 @@ class Player:
         self.t_since_lkp += 1
         self.pos = Vector(pos_x, pos_y) # update current position
         
-        if self.pos.dist2(self.prev_pos) < EPSILON or self.pos.dist2(self.preprev_pos) < 0.3: # if we are not moving
+        if self.pos.dist2(self.prev_pos) < EPSILON or self.pos.dist2(self.preprev_pos) < 0.3: # if we are oscilating/not moving
             self.dir = self.__randunit()
             npos = self.pos + self.dir
             while any(npos.dist2stall(obstacle) <= 2*DANGER_ZONE for obstacle in self.obstacles_known) or any(npos.dist2(player) < 2*DANGER_ZONE+1 for player in self.players_cached):
                 self.dir = self.__randunit()
                 npos = self.pos + self.dir
+            self.should_lookup = True
             return 'move'
 
         if self.should_lookup \
