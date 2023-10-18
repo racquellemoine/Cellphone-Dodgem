@@ -120,6 +120,7 @@ class Player:
         self.name = name
         self.color = color
         self.prev_pos = Vector(-1, -1)
+        self.preprev_pos = Vector(-1, -1)
         self.pos = Vector(initial_pos_x, initial_pos_y)
         self.all_stalls = stalls_to_visit
         self.stalls_next = list()
@@ -278,6 +279,7 @@ class Player:
     def encounter_obstacle(self):
         # theoretically, we would never encounter an obstacle
         print("Warning: Encountered an obstacle.")
+        self.preprev_pos.update_val(self.prev_pos)
         self.prev_pos.update_val(self.pos)
         self.should_lookup = True
 
@@ -294,11 +296,12 @@ class Player:
             #     self.phase1done = True
             #     self.stalls_next.
         if self.t_since_lkp>0:
+            self.preprev_pos.update_val(self.prev_pos)
             self.prev_pos.update_val(self.pos)
         self.t_since_lkp += 1
         self.pos = Vector(pos_x, pos_y) # update current position
         
-        if self.pos.dist2(self.prev_pos) < EPSILON: # if we are not moving
+        if self.pos.dist2(self.prev_pos) < EPSILON or self.pos.dist2(self.preprev_pos) < 0.3: # if we are not moving
             self.dir = self.__randunit()
             return 'move'
 
