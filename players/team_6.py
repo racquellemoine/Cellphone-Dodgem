@@ -324,8 +324,10 @@ class Player:
     # simulator calls this function to get the next move from the player
     # this function is called if the player returns 'move' as the action in the get_action function
     def get_next_move(self):
+        if len(self.stalls_next) == 0:
+            return self.pos.x, self.pos.y
+        
         self.dir = self.pos.normalized_dir(self.aStarRoute.pop(0)) \
             if len(self.aStarRoute) > 0 else \
             self.pos.normalized_dir(self.__next_stall())
-
         return self.pos.x + self.dir.x, self.pos.y + self.dir.y
