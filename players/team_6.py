@@ -33,10 +33,10 @@ class Vector:
     def out_of_obstacle(self, obstacle) -> bool:
         """Whether the vector is outside of the obstacle."""
         if abs(self.x - obstacle.x)<=1:
-            return abs(self.y - obstacle.y)>1+DANGER_ZONE
+            return abs(self.y - obstacle.y)>1.5+DANGER_ZONE
         if abs(self.y - obstacle.y)<=1:
-            return abs(self.x - obstacle.x)>1+DANGER_ZONE
-        return self.dist2stall(obstacle) > DANGER_ZONE
+            return abs(self.x - obstacle.x)>1.5+DANGER_ZONE
+        return self.dist2stall(obstacle) > DANGER_ZONE+1.5
 
     def dist2stall(self, stall):
         """Shortest distance to a corner of the stall"""
