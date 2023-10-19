@@ -7,6 +7,7 @@ import os
 import shutil
 import Pmw
 import fast_tsp
+import sys
 
 import constants
 from players.default_player import Player as DefaultPlayer
@@ -659,6 +660,7 @@ Total Time: " + str(self.T) + "\n\n")
                 interrupt = []
                 logs = []
 
+                sys.stdout = open(os.devnull, 'w')
                 for index, player in enumerate(self.players):
                     # get player action
                     start_time = time.time()
@@ -835,7 +837,7 @@ Total Time: " + str(self.T) + "\n\n")
                     with open(self.score_log, 'a') as f:
                         f.write(str(index + 1).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(
                             int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " ") + "\n")
-
+                sys.stdout = sys.__stdout__
                 print(self.turn_no)
                 self.turn_no += 1
         else:
