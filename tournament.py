@@ -41,30 +41,31 @@ for nv in no_of_stalls:
             for t in theta:
                 count += 1
                 with open('tournament_1.sh', 'a') as f:
-                    f.write('python main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 5\n")
+                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 5\n")
                     f.write('cat logs/game_config.txt >> tournament_results.txt\n')
                     f.write('cat logs/result.txt >> tournament_results.txt\n')
                     f.write('echo "run ' + str(count) + '/' + str(total) + '"' + '\n')
-
+count = 0
 for nv in no_of_stalls:
     for no in no_of_obstacles:
         for p in players:
             for t in theta:
                 with open('tournament_2.sh', 'a') as f:
-                    f.write('python main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 10\n")
+                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 10\n")
                     f.write('cat logs/game_config.txt >> tournament_results.txt\n')
                     f.write('cat logs/result.txt >> tournament_results.txt\n')
-
+                    f.write('echo "run ' + str(count) + '/' + str(total) + '"' + '\n')
+count = 0
 for nv in no_of_stalls:
     for no in no_of_obstacles:
         for p in players:
             for t in theta:
                 with open('tournament_3.sh', 'a') as f:
-                    f.write('python main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 15\n")
+                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 15\n")
                     f.write('cat logs/game_config.txt >> tournament_results.txt\n')
                     f.write('cat logs/result.txt >> tournament_results.txt\n')
-
-
+                    f.write('echo "run ' + str(count) + '/' + str(total) + '"' + '\n')
+                    
 with open('tournament_1.sh', 'a') as f:
     f.write('end=$(date +%s)\necho "Elapsed Time: $(($end-$start)) seconds" >> time.txt')
 
