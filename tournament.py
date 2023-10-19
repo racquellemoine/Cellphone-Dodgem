@@ -52,7 +52,7 @@ for p in players:
             for t in theta:
                 with open('tournament_2.sh', 'a') as f:
                     f.write('echo -e "\n\nRun ' + str(count) + '/' + str(total) + '"' + '\n')
-                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 10\n")
+                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 2\n")
                     f.write('cat logs/game_config.txt >> tournament_results.txt\n')
                     f.write('cat logs/result.txt >> tournament_results.txt\n')
 count = 0
@@ -62,7 +62,7 @@ for p in players:
             for t in theta:
                 with open('tournament_3.sh', 'a') as f:
                     f.write('echo -e "\n\nRun ' + str(count) + '/' + str(total) + '"' + '\n')
-                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 15\n")
+                    f.write('python3 main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 3\n")
                     f.write('cat logs/game_config.txt >> tournament_results.txt\n')
                     f.write('cat logs/result.txt >> tournament_results.txt\n')
 
