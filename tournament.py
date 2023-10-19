@@ -25,13 +25,13 @@ players = ['1 2 3 4 5 6',\
 theta = [1, 2, 3]
 
 with open('tournament_1.sh', 'w') as f:
-    f.write('')
+    f.write('start=$(date +%s)\n')
 
 with open('tournament_2.sh', 'w') as f:
-    f.write('')
+    f.write('start=$(date +%s)\n')
 
 with open('tournament_3.sh', 'w') as f:
-    f.write('')
+    f.write('start=$(date +%s)\n')
 
 total = len(no_of_stalls) * len(no_of_obstacles) * len(players) * len(theta)
 count = 0
@@ -63,3 +63,13 @@ for nv in no_of_stalls:
                     f.write('python main.py --gui False -ns ' + str(nv + no) + ' -nv ' + str(nv) + ' -p ' + str(p) + ' --theta ' + str(t) + " --seed 15\n")
                     f.write('cat logs/game_config.txt >> tournament_results.txt\n')
                     f.write('cat logs/result.txt >> tournament_results.txt\n')
+
+
+with open('tournament_1.sh', 'a') as f:
+    f.write('end=$(date +%s)\necho "Elapsed Time: $(($end-$start)) seconds" >> time.txt')
+
+with open('tournament_2.sh', 'a') as f:
+    f.write('end=$(date +%s)\necho "Elapsed Time: $(($end-$start)) seconds" >> time.txt')
+
+with open('tournament_3.sh', 'a') as f:
+    f.write('end=$(date +%s)\necho "Elapsed Time: $(($end-$start)) seconds" >> time.txt')
