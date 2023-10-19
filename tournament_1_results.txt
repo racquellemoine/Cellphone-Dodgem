@@ -1,0 +1,144 @@
+
+Game Configuration
+Total Number of Stalls: 2
+Number of Stalls to Visit: 2
+Number of Obstacles: 0
+Players: ['1', '2', '3', '4', '5', '6']
+Theta: 1
+Total Time: 0
+
+Results
+ID  Team      Items       Satisfaction   
+5   5         2/2         8770.23        
+4   4         2/2         8669.48        
+6   6         2/2         8667.89        
+2   2         2/2         8460.63        
+3   3         2/2         155.18         
+1   1         1/2         0              
+
+
+Game Configuration
+Total Number of Stalls: 2
+Number of Stalls to Visit: 2
+Number of Obstacles: 0
+Players: ['1', '2', '3', '4', '5', '6']
+Theta: 2
+Total Time: 0
+
+Results
+ID  Team      Items       Satisfaction   
+5   5         2/2         20565.96       
+6   6         2/2         20501.56       
+4   4         2/2         20478.73       
+2   2         2/2         20256.37       
+3   3         2/2         155.18         
+1   1         1/2         0              
+
+
+Game Configuration
+Total Number of Stalls: 2
+Number of Stalls to Visit: 2
+Number of Obstacles: 0
+Players: ['1', '2', '3', '4', '5', '6']
+Theta: 3
+Total Time: 0
+
+Results
+ID  Team      Items       Satisfaction   
+5   5         2/2         33189.82       
+6   6         2/2         33146.55       
+4   4         2/2         33110.08       
+2   2         2/2         32880.23       
+3   3         2/2         155.18         
+1   1         1/2         0              
+
+
+Game Configuration
+Total Number of Stalls: 2
+Number of Stalls to Visit: 2
+Number of Obstacles: 0
+Players: ['1', '1', '1', '2', '2', '2', '3', '3', '3', '4', '4', '4', '5', '5', '5', '6', '6', '6']
+Theta: 1
+Total Time: 0
+
+Results
+ID  Team      Items       Satisfaction   
+14  5         2/2         8888.12        
+18  6         2/2         8569.03        
+17  6         2/2         8531.49        
+15  5         2/2         8326.74        
+11  4         2/2         8316.48        
+16  6         2/2         8264.61        
+4   2         2/2         7835.03        
+5   2         2/2         7826.42        
+8   3         2/2         409.09         
+12  4         2/2         274.49         
+10  4         2/2         222.52         
+6   2         2/2         122.62         
+9   3         1/2         296.51         
+7   3         1/2         291.41         
+13  5         1/2         216.0          
+1   1         1/2         0              
+3   1         0/2         0              
+2   1         0/2         0              
+
+
+Game Configuration
+Total Number of Stalls: 2
+Number of Stalls to Visit: 2
+Number of Obstacles: 0
+Players: ['1', '1', '1', '2', '2', '2', '3', '3', '3', '4', '4', '4', '5', '5', '5', '6', '6', '6']
+Theta: 2
+Total Time: 0
+
+Results
+ID  Team      Items       Satisfaction   
+14  5         2/2         20733.84       
+18  6         2/2         20396.08       
+17  6         2/2         20346.32       
+15  5         2/2         20112.26       
+16  6         2/2         20064.86       
+11  4         2/2         19532.23       
+4   2         2/2         19428.83       
+8   3         2/2         409.09         
+12  4         2/2         274.49         
+10  4         2/2         222.52         
+6   2         2/2         122.62         
+9   3         1/2         296.51         
+7   3         1/2         291.41         
+5   2         1/2         257.31         
+13  5         1/2         216.0          
+1   1         1/2         0              
+3   1         0/2         0              
+2   1         0/2         0              
+
+
+Game Configuration
+Total Number of Stalls: 2
+Number of Stalls to Visit: 2
+Number of Obstacles: 0
+Players: ['1', '1', '1', '2', '2', '2', '3', '3', '3', '4', '4', '4', '5', '5', '5', '6', '6', '6']
+Theta: 3
+Total Time: 0
+
+Results
+ID  Team      Items       Satisfaction   
+14  5         2/2         33385.6        
+18  6         2/2         33037.36       
+17  6         2/2         32980.78       
+15  5         2/2         32730.47       
+16  6         2/2         32691.22       
+5   2         2/2         32112.47       
+11  4         2/2         19938.26       
+8   3         2/2         409.09         
+12  4         2/2         274.49         
+4   2         2/2         238.72         
+10  4         2/2         222.52         
+6   2         2/2         122.62         
+9   3         1/2         296.51         
+7   3         1/2         291.41         
+13  5         1/2         216.0          
+1   1         1/2         0              
+3   1         0/2         0              
+2   1         0/2         0              
+
