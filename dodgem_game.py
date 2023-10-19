@@ -838,7 +838,8 @@ Total Time: " + str(self.T) + "\n\n")
                         f.write(str(index + 1).ljust(int(1.2 * self.canvas_scale), " ") + str(player_state.name).ljust(int(1 * self.canvas_scale), " ") + (str(player_state.items_obtained) + "/" + str(len(self.stalls_to_visit))).ljust(
                             int(1.2 * self.canvas_scale), " ") + str(player_state.interaction).ljust(int(1.5 * self.canvas_scale), " ") + str(round(player_state.satisfaction, 2)).ljust(int(1.5 * self.canvas_scale), " ") + "\n")
                 sys.stdout = sys.__stdout__
-                print(self.turn_no)
+                if self.turn_no % 100 == 0:
+                    print(self.turn_no, end=" ")
                 self.turn_no += 1
         else:
             if self.iteration == self.T:
